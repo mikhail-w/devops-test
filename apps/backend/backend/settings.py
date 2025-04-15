@@ -144,7 +144,6 @@ print(f"AWS_STORAGE_BUCKET_NAME: {AWS_STORAGE_BUCKET_NAME}")
 print(f"AWS_S3_REGION_NAME: {AWS_S3_REGION_NAME}")
 print(f"AWS_S3_CUSTOM_DOMAIN: {AWS_S3_CUSTOM_DOMAIN}")
 
-
 # Create custom storage classes
 class MediaStorage(S3Boto3Storage):
     location = "media"
@@ -182,46 +181,19 @@ class DebugMediaStorage(MediaStorage):
 class StaticStorage(S3Boto3Storage):
     location = "static"  # store files under 'static/' directory
 
-
-# Storage configuration
-if AWS_STORAGE_BUCKET_NAME:
-    # Use S3 storage when AWS bucket is configured
-    STORAGES = {
-        "default": {
-            "BACKEND": "backend.settings.DebugMediaStorage",
-        },
-        "staticfiles": {
-            "BACKEND": "backend.settings.StaticStorage",
-        },
-    }
-    
-    # CloudFront/S3 URLs
-    STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/static/"
-    MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/media/"
-else:
-    # Use local storage when AWS is not configured
-    STORAGES = {
-        "default": {
-            "BACKEND": "django.core.files.storage.FileSystemStorage",
-        },
-        "staticfiles": {
-            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-        },
-    }
-    
-    # Local URLs
-    STATIC_URL = "/static/"
-    MEDIA_URL = "/media/"
-
-# Static and Media root directories
+# Local development settings (always use these regardless of AWS settings)
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
+MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / "media"
+
+# Configure whitenoise for serving static files
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 # Print URL configurations
 print("\n=== URL Configuration ===")
 print(f"MEDIA_URL: {MEDIA_URL}")
 print(f"STATIC_URL: {STATIC_URL}")
-
 
 # REST framework settings
 REST_FRAMEWORK = {
@@ -242,7 +214,6 @@ SIMPLE_JWT = {
 
 # CORS settings
 # CORS_ORIGIN_ALLOW_ALL = True
-
 
 # Uncomment and configure if you want to restrict allowed origins
 CORS_ALLOWED_ORIGINS = [
