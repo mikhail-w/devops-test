@@ -1,0 +1,44 @@
+/* body, html, p, h1, h2, span, p, a {
+  font-family: "Varela Round", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+} */
+#order, #item {
+  /* background-color: #fff9f1; */
+}
+
+.not-delivered, .not-paid {
+  background-color: #ffbe0b;
+  padding: 8px 10px;
+  width: 150px;
+  text-align: center;
+  border-radius: 20px;
+  margin: 10px;
+}
+
+.delivered, .paid {
+  background-color: #0ead69;
+  padding: 8px 20px;
+  width: 350px;
+  text-align: center;
+  border-radius: 20px;
+  margin: 10px;
+  /* color: #fff9f1; */
+}
+
+.summaryContainer {
+  margin-top: 50px;
+  min-height: 90vh;
+}
+
+strong {
+  font-weight: bold;
+  font-size: 1.1rem;
+  padding-right: 5px;
+  color: rgb(81, 195, 123);
+  color: rgb(255, 255, 255);
+  color: rgb(50, 205, 50);
+}
+
+/* backgroundColor: '#53c47b', */
+/* background: 'linear-gradient(179.1deg,#1D976C 2.3%,#93F9B9 98.3%)', */
