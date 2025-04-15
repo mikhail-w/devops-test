@@ -12,12 +12,16 @@ export const getImagePath = imagePath => {
 
   // Clean the path by removing any existing prefixes
   const cleanMediaPath = (imagePath, baseURL) => {
-  if (!imagePath) return null;
+    if (!imagePath) return null;
 
-  // Ensure baseURL ends without a slash and imagePath starts without one
-  const cleanBaseURL = baseURL.replace(/\/+$/, '');
-  const cleanPath = imagePath.replace(/^\/+/, '').replace(/\/+/g, '/'); // Remove leading/trailing/multiple slashes
+    // Ensure baseURL ends without a slash and imagePath starts without one
+    const cleanBaseURL = baseURL.replace(/\/+$/, '');
+    const cleanPath = imagePath.replace(/^\/+/, '').replace(/\/+/g, '/'); // Remove leading/trailing/multiple slashes
 
-  // Construct full URL
-  return `${cleanBaseURL}/${cleanPath}`;
+    // Construct full URL
+    return `${cleanBaseURL}/${cleanPath}`;
+  };
+
+  // Use the cleaned path with the API base URL
+  return cleanMediaPath(imagePath, import.meta.env.VITE_API_BASE_URL);
 };

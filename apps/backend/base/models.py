@@ -26,10 +26,10 @@ class Product(models.Model):
     image = models.ImageField(
         null=True,
         blank=True,
-        upload_to="products/",
-        default="products/placeholder.jpg",
+        default="default/placeholder.jpg",
+        upload_to="products/"
     )
-    _type = models.CharField(max_length=200, null=True, blank=True)
+    brand = models.CharField(max_length=200, null=True, blank=True)
     category = models.CharField(max_length=200, null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     rating = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True)

@@ -100,19 +100,13 @@ class ProductSerializer(serializers.ModelSerializer):
         print("\n=== ProductSerializer get_image_url ===")
         print(f"Product: {obj.name}")
 
-        if obj.image and hasattr(obj.image, "url"):
-            # Remove any double slashes and ensure proper URL construction
-            url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{obj.image.name}"
-            url = url.replace(
-                "//", "/"
-            )  # Clean up any double slashes except for https://
-            url = url.replace(
-                "https:/", "https://"
-            )  # Fix the https:// if it was affected
+        if obj.image and hasattr(obj.image, 'url'):
+            url = obj.image.url
             print(f"SERIALIZER (get_image_url) Image URL:\n\t {url}")
             return url
 
-        return f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/media/products/placeholder.jpg"
+        # Placeholder image
+        return f"{settings.MEDIA_URL}default/placeholder.jpg"
 
     def get_reviews(self, obj):
         reviews = obj.review_set.all()

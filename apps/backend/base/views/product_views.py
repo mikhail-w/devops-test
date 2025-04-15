@@ -6,6 +6,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+import os
 
 
 @api_view(["GET"])
@@ -90,17 +91,68 @@ def updateProduct(request, pk):
     data = request.data
     product = get_object_or_404(Product, _id=pk)
 
-    product.name = data.get("name", product.name)
-    product.price = data.get("price", product.price)
-    product._type = data.get("_type", product._type)
-    product.countInStock = data.get("countInStock", product.countInStock)
-    product.category = data.get("category", product.category)
-    product.description = data.get("description", product.description)
+    try:
+        # Validate name
+        name = data.get("name")
+        if name is not None:
+            if not name.strip():
+                return Response(
+                    {"detail": "Product name cannot be empty"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            product.name = name.strip()
 
-    product.save()
+        # Validate price
+        price = data.get("price")
+        if price is not None:
+            try:
+                price = float(price)
+                if price < 0:
+                    return Response(
+                        {"detail": "Price cannot be negative"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                product.price = price
+            except (ValueError, TypeError):
+                return Response(
+                    {"detail": "Invalid price value"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
-    serializer = ProductSerializer(product, many=False)
-    return Response(serializer.data)
+        # Validate stock
+        stock = data.get("countInStock")
+        if stock is not None:
+            try:
+                stock = int(stock)
+                if stock < 0:
+                    return Response(
+                        {"detail": "Stock cannot be negative"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                product.countInStock = stock
+            except (ValueError, TypeError):
+                return Response(
+                    {"detail": "Invalid stock value"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        # Update other fields
+        if "category" in data:
+            product.category = data["category"]
+        if "brand" in data:
+            product.brand = data["brand"]
+        if "description" in data:
+            product.description = data["description"]
+
+        product.save()
+        serializer = ProductSerializer(product, many=False)
+        return Response(serializer.data)
+
+    except Exception as e:
+        return Response(
+            {"detail": f"An error occurred: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 
 @api_view(["DELETE"])
@@ -114,21 +166,58 @@ def deleteProduct(request, pk):
 
 
 @api_view(["POST"])
+@permission_classes([IsAdminUser])
 def uploadImage(request):
     data = request.data
+
     product_id = data.get("product_id")
+    if not product_id:
+        return Response(
+            {"detail": "Product ID is required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     product = get_object_or_404(Product, _id=product_id)
+    image = request.FILES.get("image")
 
-    if "image" in request.FILES:
-        product.image = request.FILES["image"]
-        product.image.name = f"products/{product.image.name}"
+    if not image:
+        return Response(
+            {"detail": "No image file provided"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
-    product.save()
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/png", "image/jpg"]
+    if image.content_type not in allowed_types:
+        return Response(
+            {"detail": "Invalid file type. Only JPEG and PNG files are allowed."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
-    return Response(
-        {"detail": "Image uploaded successfully"}, status=status.HTTP_200_OK
-    )
+    # Validate file size (max 5MB)
+    max_size = 5 * 1024 * 1024  # 5MB in bytes
+    if image.size > max_size:
+        return Response(
+            {"detail": "File size too large. Maximum size is 5MB."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        # Delete old image if it exists
+        if product.image:
+            if os.path.isfile(product.image.path):
+                os.remove(product.image.path)
+
+        product.image = image
+        product.save()
+
+        return Response("Image was uploaded", status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response(
+            {"detail": f"Error uploading image: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 
 @api_view(["POST"])

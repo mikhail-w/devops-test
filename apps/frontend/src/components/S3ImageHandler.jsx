@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Box, Image } from '@chakra-ui/react';
 
-// Use the VITE_S3_PATH environment variable for the base URL
-const S3_BASE_URL =
-  import.meta.env.VITE_S3_PATH || 'https://d2v41dj0jm6bl1.cloudfront.net';
+// Get environment variables
+const IS_DEVELOPMENT = import.meta.env.VITE_ENV === 'development';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const S3_BASE_URL = import.meta.env.VITE_S3_PATH;
 
 const S3ImageHandler = ({
   imagePath,
@@ -16,25 +17,22 @@ const S3ImageHandler = ({
 }) => {
   const [imageError, setImageError] = useState(false);
 
-  const getS3Url = path => {
+  const getImageUrl = path => {
     if (!path) return null;
 
-    // Remove the full CloudFront URL if it's already in the path
-    const cleanPath = path.replace(S3_BASE_URL, '');
-
-    // Clean the path and ensure proper formatting
-    const formattedPath = cleanPath
+    // Clean the path by removing any prefixes and extra slashes
+    const cleanPath = path
       .replace(/^\/+|\/+$/g, '') // Remove leading/trailing slashes
       .replace(/^media\/?/, '') // Remove 'media/' prefix if exists
       .replace(/\/+/g, '/'); // Replace multiple slashes with single
 
-    // Ensure the path doesn't start with a slash
-    const finalPath = formattedPath.startsWith('/')
-      ? formattedPath.slice(1)
-      : formattedPath;
+    // In development, use local Django media server
+    if (IS_DEVELOPMENT) {
+      return `${API_BASE_URL}/media/${cleanPath}`;
+    }
 
-    // Construct the full S3 URL ensuring 'media' is included only once
-    return `${S3_BASE_URL}/media/${finalPath}`;
+    // In production, use S3/CloudFront
+    return `${S3_BASE_URL}/media/${cleanPath}`;
   };
 
   const handleError = () => {
@@ -77,7 +75,7 @@ const S3ImageHandler = ({
 
   return (
     <Image
-      src={getS3Url(imagePath)}
+      src={getImageUrl(imagePath)}
       alt={alt}
       roundedTop={roundedTop}
       objectFit={objectFit}

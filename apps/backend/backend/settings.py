@@ -129,71 +129,38 @@ USE_I18N = True
 USE_TZ = True
 
 # S3 Configuration
-AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
-AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
-AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "us-east-1")
-AWS_S3_CUSTOM_DOMAIN = os.getenv("AWS_S3_CUSTOM_DOMAIN")
-AWS_QUERYSTRING_AUTH = False  # For public access to files
+AWS_ACCESS_KEY_ID = None
+AWS_SECRET_ACCESS_KEY = None
+AWS_STORAGE_BUCKET_NAME = None
+AWS_S3_REGION_NAME = None
+AWS_S3_CUSTOM_DOMAIN = None
+AWS_QUERYSTRING_AUTH = False
 AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL = None
 
-# Print S3 configuration
-print("\n=== S3 Configuration ===")
-print(f"AWS_STORAGE_BUCKET_NAME: {AWS_STORAGE_BUCKET_NAME}")
-print(f"AWS_S3_REGION_NAME: {AWS_S3_REGION_NAME}")
-print(f"AWS_S3_CUSTOM_DOMAIN: {AWS_S3_CUSTOM_DOMAIN}")
+# Storage configuration
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
 
-# Create custom storage classes
-class MediaStorage(S3Boto3Storage):
-    location = "media"
-    file_overwrite = False
+# Local URLs
+STATIC_URL = "/static/"
+MEDIA_URL = "/media/"
 
-    def _save(self, name, content):
-        print(f"\n=== MediaStorage Save ===")
-        print(f"Saving file: {name}")
-        print(f"Location: {self.location}")
-        return super()._save(name, content)
-
-
-class DebugMediaStorage(MediaStorage):
-    def _save(self, name, content):
-        """
-        Enhanced debug version of MediaStorage that prints detailed information
-        about file uploads\n\n======= WORKING ON LOCAL MACHINE.=======\n\n
-        """
-        print("\n=== Debug S3 Storage ===")
-        print(f"Saving file: {name}")
-        print(f"Content type: {getattr(content, 'content_type', 'unknown')}")
-        print(f"Size: {getattr(content, 'size', 'unknown')}")
-        print(f"Storage location: {self.location}")
-        print(f"Full path: {os.path.join(self.location, name)}")
-        try:
-            result = super()._save(name, content)
-            print(f"File saved successfully: {result}")
-            print(f"Expected URL: {self.url(result)}")
-            return result
-        except Exception as e:
-            print(f"Error saving file: {str(e)}")
-            raise
-
-
-class StaticStorage(S3Boto3Storage):
-    location = "static"  # store files under 'static/' directory
-
-# Local development settings (always use these regardless of AWS settings)
-STATIC_URL = '/static/'
+# Static and Media root directories
 STATIC_ROOT = BASE_DIR / "staticfiles"
-MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / "media"
-
-# Configure whitenoise for serving static files
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 # Print URL configurations
 print("\n=== URL Configuration ===")
 print(f"MEDIA_URL: {MEDIA_URL}")
 print(f"STATIC_URL: {STATIC_URL}")
+
 
 # REST framework settings
 REST_FRAMEWORK = {
@@ -214,6 +181,7 @@ SIMPLE_JWT = {
 
 # CORS settings
 # CORS_ORIGIN_ALLOW_ALL = True
+
 
 # Uncomment and configure if you want to restrict allowed origins
 CORS_ALLOWED_ORIGINS = [
