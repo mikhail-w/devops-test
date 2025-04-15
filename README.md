@@ -27,34 +27,53 @@ Ensure you configure your environment variables for both the **frontend** and **
 
 ### Frontend (`.env` in `apps/frontend/`)
 ```env
-VITE_API_URL=your_backend_api_url
+# API Configuration
+VITE_API_BASE_URL=http://127.0.0.1:8000
+VITE_API_URL=http://127.0.0.1:8000/api
+
+# External Services (Replace with your own API keys in production)
 VITE_WEATHER_API_KEY=your_open-weather_api_key
 VITE_PAYPAL_CLIENT_ID=your_paypal_client_id
 VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
 VITE_GOOGLE_CLOUD_VISION_API_KEY=your_google_cloud_vision_api_key
+
+# AWS S3 Configuration (Optional - only needed if using S3 for storage)
 VITE_S3_BUCKET=your_s3_bucket_name
 VITE_S3_REGION=your_s3_region
 VITE_S3_PATH=your_s3_bucket_path
-VITE_API_BASE_URL=your_api_base_url
 ```
 
 ### Backend (`.env` in `apps/backend/`)
 ```env
-OPENAI_API_KEY=your_openai_api_key
-DJANGO_SECRET_KEY=your_django_secret_key
-DJANGO_ALLOWED_HOSTS=your_django_allowed_hosts
+# Django Configuration
+DJANGO_SECRET_KEY=django-insecure-your-secret-key-for-development
 DJANGO_DEBUG=True
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+
+# Database Configuration (Default PostgreSQL settings)
 DB_USER=postgres
 DB_PASSWORD=password
 DB_NAME=bonsai_store
 DB_HOST=localhost
 DB_PORT=5432
-AWS_ACCESS_KEY_ID=your_aws_access_key_id
-AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
-AWS_STORAGE_BUCKET_NAME=your_storage_bucket_name
-AWS_S3_REGION_NAME=your_storage_bucket_region
-AWS_S3_CUSTOM_DOMAIN=your_s3_custom_domain
+
+# OpenAI Configuration (Optional - only needed for AI features)
+OPENAI_API_KEY=your_openai_api_key
+
+# AWS S3 Configuration (Optional - only needed if using S3 for storage)
+AWS_ACCESS_KEY_ID=None
+AWS_SECRET_ACCESS_KEY=None
+AWS_STORAGE_BUCKET_NAME=None
+AWS_S3_REGION_NAME=None
+AWS_S3_CUSTOM_DOMAIN=None
 ```
+
+> **Important Notes for Local Development:**
+> 1. The above values are suitable for local development only. Use proper secure values in production.
+> 2. For local development, you only need to set up the database configuration and Django secret key.
+> 3. External service API keys (OpenAI, Google Maps, etc.) are optional and only needed if you want to use those specific features.
+> 4. AWS S3 configuration is optional. The application will use local file storage by default.
+> 5. Make sure to keep your `.env` files out of version control by adding them to `.gitignore`.
 
 ## Setup Instructions
 
