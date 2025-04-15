@@ -64,6 +64,7 @@ const router = createBrowserRouter([
           { path: 'threeDModel', element: <ThreeDModel /> },
           { path: 'explore', element: <MapPage /> },
           { path: 'blog', element: <BlogPage /> },
+          { path: 'blog/:id', element: <BlogPostPage /> },
           { path: 'ar', element: <AugmentedReality /> },
           { path: 'favorites', element: <Favorites /> },
           { path: 'chat', element: <Chat /> },

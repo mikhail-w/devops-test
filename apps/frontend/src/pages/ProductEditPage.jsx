@@ -52,7 +52,7 @@ const ProductEditPage = () => {
     if (successUpdate) {
       dispatch({ type: PRODUCT_UPDATE_RESET });
       toast({ title: 'Product updated successfully!', status: 'success' });
-      navigate('/admin/productlist');
+      navigate('/profile/admin/productlist');
     } else {
       if (!product.name || product._id !== Number(productId)) {
         dispatch(listProductDetails(productId));

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -17,6 +17,13 @@ import {
   IconButton,
   useColorModeValue,
   Center,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay,
+  useDisclosure,
 } from '@chakra-ui/react';
 import { FaPlusCircle } from 'react-icons/fa';
 import { BiTrash } from 'react-icons/bi';
@@ -41,6 +48,9 @@ function BlogPage() {
   const [image, setImage] = useState(null);
   const [creatingPost, setCreatingPost] = useState(false);
   const [activeHearts, setActiveHearts] = useState({}); // Store heart state locally
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const cancelRef = React.useRef();
+  const [postToDelete, setPostToDelete] = useState(null);
 
   const blogList = useSelector(state => state.blogList);
   const { loading, error, posts } = blogList;
@@ -113,224 +123,262 @@ function BlogPage() {
   };
 
   const deletePostHandler = postId => {
-    dispatch(deleteBlogPost(postId));
+    setPostToDelete(postId);
+    onOpen();
+  };
+
+  const confirmDelete = () => {
+    if (postToDelete) {
+      dispatch(deleteBlogPost(postToDelete));
+      setPostToDelete(null);
+    }
+    onClose();
   };
 
   const readHandler = postId => {
     if (userInfo) {
-      navigate(`/blog/${postId}`);
+      navigate(`/profile/blog/${postId}`);
     } else {
       navigate('/login');
     }
   };
 
   return (
-    <Box
-      bg={bgColor}
-      mt={100}
-      maxW="800px"
-      mx="auto"
-      px={4}
-      paddingTop={'30px'}
-      minHeight={'100vh'}
-      mb={100}
-    >
-      <Flex justify="space-between" align="center" mb={6}>
-        <Text
-          fontFamily={'rale'}
-          fontSize="3xl"
-          fontWeight="600"
-          color={textColor}
-          textAlign="center"
-        >
-          Bonsai Blog
-        </Text>
-
-        {userInfo && (
-          <Button
+    <>
+      <Box
+        bg={bgColor}
+        mt={100}
+        maxW="800px"
+        mx="auto"
+        px={4}
+        paddingTop={'30px'}
+        minHeight={'100vh'}
+        mb={100}
+      >
+        <Flex justify="space-between" align="center" mb={6}>
+          <Text
             fontFamily={'rale'}
-            leftIcon={<FaPlusCircle />}
-            colorScheme="green"
-            variant="solid"
-            onClick={() => setCreatingPost(prev => !prev)}
+            fontSize="3xl"
+            fontWeight="600"
+            color={textColor}
+            textAlign="center"
           >
-            {creatingPost ? 'Cancel' : 'Create Post'}
-          </Button>
-        )}
-      </Flex>
+            Bonsai Blog
+          </Text>
 
-      {creatingPost && userInfo && (
-        <Box bg={bgColor} p={6} mb={8} borderRadius="lg" shadow="lg">
-          <VStack spacing={4}>
-            <Textarea
-              fontFamily={'rale'}
-              placeholder="What's on your mind?"
-              value={content}
-              onChange={e => setContent(e.target.value)}
-              size="lg"
-              focusBorderColor="green.400"
-            />
-            <Input
-              type="file"
-              onChange={e => setImage(e.target.files[0])}
-              accept="image/*"
-              size="lg"
-            />
+          {userInfo && (
             <Button
               fontFamily={'rale'}
+              leftIcon={<FaPlusCircle />}
               colorScheme="green"
-              onClick={submitHandler}
-              isLoading={loadingCreate}
-              w="full"
+              variant="solid"
+              onClick={() => setCreatingPost(prev => !prev)}
             >
-              Post
+              {creatingPost ? 'Cancel' : 'Create Post'}
             </Button>
-            {errorCreate && <Text color="red.500">{errorCreate}</Text>}
-          </VStack>
-        </Box>
-      )}
+          )}
+        </Flex>
 
-      {loading ? (
-        <Center marginBottom={'50vh'}>
-          <Loader />
-        </Center>
-      ) : error ? (
-        <Text color="red.500">{error}</Text>
-      ) : (
-        <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={6}>
-          {posts?.map(post => (
-            <GridItem key={post.id} w="full">
-              <Box
-                bg="white"
-                p={6}
-                borderRadius="lg"
-                shadow="lg"
-                transition="transform 0.2s"
-                _hover={{ transform: 'scale(1.03)', cursor: 'pointer' }}
+        {creatingPost && userInfo && (
+          <Box bg={bgColor} p={6} mb={8} borderRadius="lg" shadow="lg">
+            <VStack spacing={4}>
+              <Textarea
+                fontFamily={'rale'}
+                placeholder="What's on your mind?"
+                value={content}
+                onChange={e => setContent(e.target.value)}
+                size="lg"
+                focusBorderColor="green.400"
+              />
+              <Input
+                type="file"
+                onChange={e => setImage(e.target.files[0])}
+                accept="image/*"
+                size="lg"
+              />
+              <Button
+                fontFamily={'rale'}
+                colorScheme="green"
+                onClick={submitHandler}
+                isLoading={loadingCreate}
+                w="full"
               >
-                <VStack align="start" spacing={4}>
-                  <HStack justify="space-between" w="full">
-                    <Text
-                      fontFamily={'rale'}
-                      fontWeight="bold"
-                      fontSize="lg"
-                      color="teal.600"
-                      isTruncated
-                    >
-                      {post.user}
-                    </Text>
+                Post
+              </Button>
+              {errorCreate && <Text color="red.500">{errorCreate}</Text>}
+            </VStack>
+          </Box>
+        )}
 
-                    {userInfo && userInfo._id === post.user_id && (
-                      <IconButton
-                        variant="ghost"
-                        colorScheme="red"
-                        aria-label="Delete post"
-                        icon={<BiTrash />}
-                        onClick={() => deletePostHandler(post.id)}
-                      />
-                    )}
-                  </HStack>
-                  <Text fontFamily={'rale'} fontSize="md" color="gray.700">
-                    {post.content}
-                  </Text>
-                  {post.image && (
-                    <>
-                      {/* {console.log('Image Path:', post.image)} */}
-                      <Image
-                        src={
-                          post.image
-                            ? cleanMediaPath(
-                                post.image,
-                                import.meta.env.VITE_API_BASE_URL
-                              )
-                            : cleanMediaPath(
-                                'default/paceholder.jpg',
-                                import.meta.env.VITE_API_BASE_URL
-                              )
-                        }
-                        alt="post"
-                        borderRadius="md"
-                        maxH="250px"
-                        objectFit="cover"
-                        w="full"
-                      />
-                    </>
-                  )}
-                  <HStack justify="space-between" w="full">
-                    <Text fontFamily={'lato'} color="gray.500" fontSize="sm">
-                      {post.likes_count} Likes
-                    </Text>
-                    <Text fontFamily={'lato'} color="gray.500" fontSize="sm">
-                      {post.comments_count} comments
-                    </Text>
-                    <Text fontFamily={'lato'} color="gray.500" fontSize="sm">
-                      {post.views} Views
-                    </Text>
-                  </HStack>
+        {loading ? (
+          <Center marginBottom={'50vh'}>
+            <Loader />
+          </Center>
+        ) : error ? (
+          <Text color="red.500">{error}</Text>
+        ) : (
+          <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={6}>
+            {posts?.map(post => (
+              <GridItem key={post.id} w="full">
+                <Box
+                  bg="white"
+                  p={6}
+                  borderRadius="lg"
+                  shadow="lg"
+                  transition="transform 0.2s"
+                  _hover={{ transform: 'scale(1.03)', cursor: 'pointer' }}
+                >
+                  <VStack align="start" spacing={4}>
+                    <HStack justify="space-between" w="full">
+                      <Text
+                        fontFamily={'rale'}
+                        fontWeight="bold"
+                        fontSize="lg"
+                        color="teal.600"
+                        isTruncated
+                      >
+                        {post.user}
+                      </Text>
 
-                  {userInfo && (
-                    <HStack>
-                      <Button
-                        variant="ghost"
-                        leftIcon={
-                          activeHearts[post.id] ? (
-                            <AiFillHeart color="red" />
-                          ) : (
-                            <AiOutlineHeart />
-                          )
-                        }
-                        onClick={() => likeUnlikeHandler(post.id)}
-                        color="gray.700"
-                        _dark={{
-                          color: 'gray.700',
-                        }}
-                        _hover={{
-                          bg: 'red.50',
-                          color: 'red.600',
-                          _dark: {
-                            bg: 'red.200',
-                            color: 'red.500',
-                          },
-                        }}
-                      >
-                        {activeHearts[post.id] ? 'Unlike' : 'Like'}
-                      </Button>
-                      <Button
-                        onClick={() => readHandler(post.id)}
-                        flex="1"
-                        variant="ghost"
-                        leftIcon={<BiChat />}
-                        color="gray.700"
-                        _dark={{
-                          color: 'gray.700',
-                        }}
-                        _hover={{
-                          bg: 'green.50',
-                          color: 'green.600',
-                          _dark: {
-                            bg: 'green.200',
-                            color: 'gray.500',
-                          },
-                        }}
-                      >
-                        Comment
-                      </Button>
+                      {userInfo && userInfo._id === post.user_id && (
+                        <IconButton
+                          variant="ghost"
+                          colorScheme="red"
+                          aria-label="Delete post"
+                          icon={<BiTrash />}
+                          onClick={() => deletePostHandler(post.id)}
+                        />
+                      )}
                     </HStack>
-                  )}
-                  {/* <Link to={`/blog/${post.id}`}> */}
-                  <Button
-                    onClick={() => readHandler(post.id)}
-                    colorScheme="green"
-                  >
-                    Read More
-                  </Button>
-                </VStack>
-              </Box>
-            </GridItem>
-          ))}
-        </Grid>
-      )}
-    </Box>
+                    <Text fontFamily={'rale'} fontSize="md" color="gray.700">
+                      {post.content}
+                    </Text>
+                    {post.image && (
+                      <>
+                        {/* {console.log('Image Path:', post.image)} */}
+                        <Image
+                          src={
+                            post.image
+                              ? cleanMediaPath(
+                                  post.image,
+                                  import.meta.env.VITE_API_BASE_URL
+                                )
+                              : cleanMediaPath(
+                                  'default/paceholder.jpg',
+                                  import.meta.env.VITE_API_BASE_URL
+                                )
+                          }
+                          alt="post"
+                          borderRadius="md"
+                          maxH="250px"
+                          objectFit="cover"
+                          w="full"
+                        />
+                      </>
+                    )}
+                    <HStack justify="space-between" w="full">
+                      <Text fontFamily={'lato'} color="gray.500" fontSize="sm">
+                        {post.likes_count} Likes
+                      </Text>
+                      <Text fontFamily={'lato'} color="gray.500" fontSize="sm">
+                        {post.comments_count} comments
+                      </Text>
+                      <Text fontFamily={'lato'} color="gray.500" fontSize="sm">
+                        {post.views} Views
+                      </Text>
+                    </HStack>
+
+                    {userInfo && (
+                      <HStack>
+                        <Button
+                          variant="ghost"
+                          leftIcon={
+                            activeHearts[post.id] ? (
+                              <AiFillHeart color="red" />
+                            ) : (
+                              <AiOutlineHeart />
+                            )
+                          }
+                          onClick={() => likeUnlikeHandler(post.id)}
+                          color="gray.700"
+                          _dark={{
+                            color: 'gray.700',
+                          }}
+                          _hover={{
+                            bg: 'red.50',
+                            color: 'red.600',
+                            _dark: {
+                              bg: 'red.200',
+                              color: 'red.500',
+                            },
+                          }}
+                        >
+                          {activeHearts[post.id] ? 'Unlike' : 'Like'}
+                        </Button>
+                        <Button
+                          onClick={() => readHandler(post.id)}
+                          flex="1"
+                          variant="ghost"
+                          leftIcon={<BiChat />}
+                          color="gray.700"
+                          _dark={{
+                            color: 'gray.700',
+                          }}
+                          _hover={{
+                            bg: 'green.50',
+                            color: 'green.600',
+                            _dark: {
+                              bg: 'green.200',
+                              color: 'gray.500',
+                            },
+                          }}
+                        >
+                          Comment
+                        </Button>
+                      </HStack>
+                    )}
+                    {/* <Link to={`/blog/${post.id}`}> */}
+                    <Button
+                      onClick={() => readHandler(post.id)}
+                      colorScheme="green"
+                    >
+                      Read More
+                    </Button>
+                  </VStack>
+                </Box>
+              </GridItem>
+            ))}
+          </Grid>
+        )}
+      </Box>
+
+      <AlertDialog
+        isOpen={isOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={onClose}
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Delete Post
+            </AlertDialogHeader>
+
+            <AlertDialogBody>
+              Are you sure you want to delete this post? This action cannot be undone.
+            </AlertDialogBody>
+
+            <AlertDialogFooter>
+              <Button ref={cancelRef} onClick={onClose}>
+                Cancel
+              </Button>
+              <Button colorScheme="red" onClick={confirmDelete} ml={3}>
+                Delete
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
+    </>
   );
 }
 

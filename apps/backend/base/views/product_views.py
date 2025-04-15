@@ -139,6 +139,8 @@ def updateProduct(request, pk):
         # Update other fields
         if "category" in data:
             product.category = data["category"]
+        if "_type" in data:
+            product._type = data["_type"]
         if "brand" in data:
             product.brand = data["brand"]
         if "description" in data:
