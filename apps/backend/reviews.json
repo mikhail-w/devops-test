@@ -3,7 +3,7 @@
     "model": "base.review",
     "pk": 1,
     "fields": {
-      "user": 6,
+      "user": 1,
       "product": 2,
       "rating": 5,
       "comment": "Absolutely breathtaking! The Korean Yew Bonsai has exceeded all my expectations. The yew is an evergreen dioecious (male and female flowers grow on separate trees ) \r\nshrub or tree with dark green needle-shaped foliage.",
@@ -18,14 +18,14 @@
       "product": 4,
       "rating": 5,
       "comment": "This Procumbens Juniper is a fantastic addition to my collection. Procumbens nana sonare juniper is an evergreen dioecious \r\n(male and female flowers grow on separate trees ) shrub or tree with \r\ndark green needle-shaped foliage.",
-      "createdAt": "2024-07-24T23:54:50.000341Z"
+      "createdAt": "2025-02-09T23:54:50.000317Z"
     }
   },
   {
     "model": "base.review",
     "pk": 3,
     "fields": {
-      "user": 9,
+      "user": 1,
       "product": 6,
       "rating": 5,
       "comment": "Absolutely breathtaking! The Spruce Bonsai has exceeded all my expectations. The Spruce Bonsai is an evergreen dioecious \r\n(male and female flowers grow on separate trees ) shrub or tree with \r\ndark green needle-shaped foliage.",
@@ -36,7 +36,7 @@
     "model": "base.review",
     "pk": 4,
     "fields": {
-      "user": 8,
+      "user": 2,
       "product": 7,
       "rating": 5,
       "comment": "I absolutely love my Juniperus Chinensis Shimpaku! It's exactly as described – This plant is grown as bonsai and requires minimal pruning.",
@@ -47,7 +47,7 @@
     "model": "base.review",
     "pk": 5,
     "fields": {
-      "user": 3,
+      "user": 1,
       "product": 8,
       "rating": 5,
       "comment": "Such an elegant piece! The Feroniella Bonsai stands out beautifully in my home. This plant is grown as bonsai, and requires minimal pruning.",
@@ -58,7 +58,7 @@
     "model": "base.review",
     "pk": 6,
     "fields": {
-      "user": 9,
+      "user": 2,
       "product": 9,
       "rating": 5,
       "comment": "I absolutely love my Hinoki Bonsai! It's exactly as described – Japanese Hinoki Bonsai is a slow-growing, evergreen tree native to Japan, valued for its fine-textured foliage, elegant form, and aromatic wood.",
@@ -69,7 +69,7 @@
     "model": "base.review",
     "pk": 7,
     "fields": {
-      "user": 3,
+      "user": 1,
       "product": 10,
       "rating": 5,
       "comment": "Absolutely breathtaking! The Bonsai Azalea has exceeded all my expectations. Bonsai Azalea is a slow-growing, evergreen tree native to Japan, valued for its fine-textured foliage, elegant form, and aromatic wood.",
@@ -91,7 +91,7 @@
     "model": "base.review",
     "pk": 9,
     "fields": {
-      "user": 8,
+      "user": 1,
       "product": 12,
       "rating": 5,
       "comment": "I absolutely love my Procumbens Nana Sonare Juniper! It's exactly as described – Procumbens nana Bonsai tree is a Japanese Juniper with a Thick Gnarly trunk\r\n Beautiful tree that is established and healthy, it is an 18 year old tree\r\n Loves to grow outside in full sun, but can be grown inside with lights or if you have a lot of sunlight , needs at least four hours direct sun daily.",
@@ -102,7 +102,7 @@
     "model": "base.review",
     "pk": 10,
     "fields": {
-      "user": 1,
+      "user": 2,
       "product": 13,
       "rating": 5,
       "comment": "The quality of the Japanese White Pine 'Negishi is outstanding! Japanese White Pine 'Negishi', not to be confused with the more commonly known Japanese Black Pine, featuring beautiful silverish-blue short needles.",
@@ -113,7 +113,7 @@
     "model": "base.review",
     "pk": 11,
     "fields": {
-      "user": 4,
+      "user": 1,
       "product": 6,
       "rating": 5,
       "comment": "What a wonderful addition to my home! The Spruce Bonsai brings such elegance and tranquility to my space. The foliage is incredibly healthy and vibrant.",
@@ -124,7 +124,7 @@
     "model": "base.review",
     "pk": 12,
     "fields": {
-      "user": 5,
+      "user": 2,
       "product": 7,
       "rating": 5,
       "comment": "The Juniperus Chinensis Shimpaku is truly a masterpiece. The minimal pruning requirement makes it perfect for beginners like me. The size is perfect for my desk!",
@@ -135,7 +135,7 @@
     "model": "base.review",
     "pk": 13,
     "fields": {
-      "user": 7,
+      "user": 1,
       "product": 7,
       "rating": 5,
       "comment": "Stunning bonsai that arrived in perfect condition. The bright environment recommendation was spot on - it's thriving in my living room!",
@@ -157,7 +157,7 @@
     "model": "base.review",
     "pk": 15,
     "fields": {
-      "user": 6,
+      "user": 1,
       "product": 8,
       "rating": 5,
       "comment": "This bonsai has become the centerpiece of my collection. The dimensions are perfect, and it requires so little maintenance!",
@@ -168,7 +168,7 @@
     "model": "base.review",
     "pk": 16,
     "fields": {
-      "user": 4,
+      "user": 2,
       "product": 8,
       "rating": 5,
       "comment": "Incredibly pleased with my Feroniella Bonsai purchase. It arrived in excellent condition and has adapted wonderfully to its new home.",
@@ -179,7 +179,7 @@
     "model": "base.review",
     "pk": 17,
     "fields": {
-      "user": 5,
+      "user": 1,
       "product": 9,
       "rating": 5,
       "comment": "The Hinoki Bonsai has exceeded my expectations. The handmade planter from South Korea adds an extra touch of elegance. Simply beautiful!",
@@ -190,7 +190,7 @@
     "model": "base.review",
     "pk": 18,
     "fields": {
-      "user": 7,
+      "user": 2,
       "product": 10,
       "rating": 4,
       "comment": "Love my Bonsai Azalea! The bright environment recommendation was perfect. While it's slightly smaller than I expected, it's still a beautiful addition to my collection.",
@@ -212,7 +212,7 @@
     "model": "base.review",
     "pk": 20,
     "fields": {
-      "user": 4,
+      "user": 2,
       "product": 11,
       "rating": 4,
       "comment": "The Bending Black Pine Bonsai is a true piece of art. While it needed some initial adjustment to its new environment, it's now thriving beautifully.",
@@ -223,7 +223,7 @@
     "model": "base.review",
     "pk": 21,
     "fields": {
-      "user": 6,
+      "user": 1,
       "product": 11,
       "rating": 3,
       "comment": "Nice bonsai with beautiful dark green needles. Would appreciate more care instructions, but overall satisfied with the purchase.",
@@ -234,7 +234,7 @@
     "model": "base.review",
     "pk": 22,
     "fields": {
-      "user": 3,
+      "user": 2,
       "product": 13,
       "rating": 5,
       "comment": "The Japanese White Pine 'Negishi' is simply magnificent! The silverish-blue needles are even more beautiful in person.",
@@ -245,18 +245,18 @@
     "model": "base.review",
     "pk": 23,
     "fields": {
-      "user": 5,
+      "user": 1,
       "product": 13,
       "rating": 5,
-      "comment": "Exceptional quality and craftsmanship. This White Pine bonsai has become the highlight of my collection!",
-      "createdAt": "2024-12-10T15:30:00.000000Z"
+      "comment": "Exceptional quality and craftsmanship. The care instructions were very helpful, and the tree is thriving in its new home.",
+      "createdAt": "2024-12-10T15:35:00.000000Z"
     }
   },
   {
     "model": "base.review",
     "pk": 24,
     "fields": {
-      "user": 7,
+      "user": 2,
       "product": 13,
       "rating": 5,
       "comment": "The dimensions are perfect and the tree is incredibly healthy. Very pleased with this purchase!",
@@ -267,7 +267,7 @@
     "model": "base.review",
     "pk": 25,
     "fields": {
-      "user": 2,
+      "user": 1,
       "product": 14,
       "rating": 4,
       "comment": "The Bonsai Hedera is a unique addition to my collection. The variegated leaves are beautiful!",
@@ -278,7 +278,7 @@
     "model": "base.review",
     "pk": 26,
     "fields": {
-      "user": 4,
+      "user": 2,
       "product": 14,
       "rating": 3,
       "comment": "Nice plant, though smaller than expected. The glossy leaves are attractive but needs more care than described.",
@@ -289,7 +289,7 @@
     "model": "base.review",
     "pk": 27,
     "fields": {
-      "user": 8,
+      "user": 1,
       "product": 15,
       "rating": 5,
       "comment": "The Bonsai Satsuki Azalea is fascinating! Love watching the leaves fold up in the evening - such an interesting feature!",
@@ -300,7 +300,7 @@
     "model": "base.review",
     "pk": 28,
     "fields": {
-      "user": 1,
+      "user": 2,
       "product": 16,
       "rating": 5,
       "comment": "The Stephania Kaweesakii 'Nova' is absolutely stunning! The purple new leaves are a sight to behold.",
@@ -311,7 +311,7 @@
     "model": "base.review",
     "pk": 29,
     "fields": {
-      "user": 3,
+      "user": 1,
       "product": 16,
       "rating": 4,
       "comment": "Beautiful plant with interesting leaf colors. Appreciate the warning about toxicity - very responsible!",
@@ -322,7 +322,7 @@
     "model": "base.review",
     "pk": 30,
     "fields": {
-      "user": 5,
+      "user": 2,
       "product": 17,
       "rating": 4,
       "comment": "The Stephania Suberosa's cracked caudex is fascinating! A unique addition to my collection.",
@@ -333,7 +333,7 @@
     "model": "base.review",
     "pk": 31,
     "fields": {
-      "user": 7,
+      "user": 1,
       "product": 17,
       "rating": 3,
       "comment": "Interesting plant with nice green vines.",

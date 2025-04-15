@@ -33,6 +33,14 @@ ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split("
 # OpenAI API Key
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
+# Security Settings
+SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT", "False").lower() in ("true", "1")
+SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "False").lower() in ("true", "1")
+CSRF_COOKIE_SECURE = os.getenv("CSRF_COOKIE_SECURE", "False").lower() in ("true", "1")
+SECURE_BROWSER_XSS_FILTER = os.getenv("SECURE_BROWSER_XSS_FILTER", "False").lower() in ("true", "1")
+SECURE_CONTENT_TYPE_NOSNIFF = os.getenv("SECURE_CONTENT_TYPE_NOSNIFF", "False").lower() in ("true", "1")
+X_FRAME_OPTIONS = os.getenv("X_FRAME_OPTIONS", "DENY")
+
 # Print initial configuration
 print("\n=== Django Configuration ===")
 print(f"DEBUG: {DEBUG}")
@@ -63,6 +71,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # Added for static files
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -175,44 +184,43 @@ class StaticStorage(S3Boto3Storage):
 
 
 # Storage configuration
-STORAGES = {
-    # Media file (uploaded files) management
-    "default": {
-        "BACKEND": "backend.settings.DebugMediaStorage",  # Use your actual path
-    },
-    # Static file management
-    "staticfiles": {
-        "BACKEND": "backend.settings.StaticStorage",  # Use your actual path
-    },
-}
+if AWS_STORAGE_BUCKET_NAME:
+    # Use S3 storage when AWS bucket is configured
+    STORAGES = {
+        "default": {
+            "BACKEND": "backend.settings.DebugMediaStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "backend.settings.StaticStorage",
+        },
+    }
+    
+    # CloudFront/S3 URLs
+    STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/static/"
+    MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/media/"
+else:
+    # Use local storage when AWS is not configured
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+    
+    # Local URLs
+    STATIC_URL = "/static/"
+    MEDIA_URL = "/media/"
 
-
-# Update MEDIA_URL to ensure it includes 'media'
-# MEDIA_URL = (
-#     f"https://{AWS_S3_CUSTOM_DOMAIN}/media/"
-#     if AWS_S3_CUSTOM_DOMAIN
-#     else f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/media/"
-# )
-# STATIC_URL = (
-#     f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/static/"
-# )
-
-# CloudFront Settings
-STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/static/"
-MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/media/"
-
-
-# Local Static and Media Files (for fallback or local development)
-# STATIC_URL = "/static/"
-# MEDIA_URL = "/media/"
+# Static and Media root directories
+STATIC_ROOT = BASE_DIR / "staticfiles"
+MEDIA_ROOT = BASE_DIR / "media"
 
 # Print URL configurations
 print("\n=== URL Configuration ===")
 print(f"MEDIA_URL: {MEDIA_URL}")
 print(f"STATIC_URL: {STATIC_URL}")
-
-STATIC_ROOT = BASE_DIR / "staticfiles"
-MEDIA_ROOT = BASE_DIR / "media"
 
 
 # REST framework settings
