@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200" height="1000" xmlns="http://www.w3.org/2000/svg">
+    <!-- Styles -->
+    <style>
+        .container { fill: #f8f9fa; stroke: #dee2e6; stroke-width: 2; }
+        .component { fill: #e9ecef; stroke: #ced4da; stroke-width: 1; }
+        .state { fill: #cff4fc; stroke: #9eeaf9; stroke-width: 1; }
+        .route { fill: #d1e7dd; stroke: #badbcc; stroke-width: 1; }
+        .text { font-family: Arial; font-size: 12px; }
+        .title { font-family: Arial; font-size: 14px; font-weight: bold; }
+        .subtitle { font-family: Arial; font-size: 11px; fill: #666; }
+        .arrow { stroke: #6c757d; stroke-width: 1.5; }
+        .arrow-text { font-family: Arial; font-size: 10px; fill: #666; }
+    </style>
+
+    <!-- Arrow Markers -->
+    <defs>
+        <marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#6c757d"/>
+        </marker>
+    </defs>
+
+    <!-- Main Application Structure -->
+    <g transform="translate(50,50)">
+        <!-- Core Application -->
+        <rect x="0" y="0" width="300" height="120" rx="5" class="container"/>
+        <text x="150" y="30" text-anchor="middle" class="title">Core Application</text>
+        <text x="20" y="50" class="text">• App.jsx (Root Component)</text>
+        <text x="20" y="70" class="text">• Router Configuration (React Router v6)</text>
+        <text x="20" y="90" class="text">• Theme Configuration (Custom Theme)</text>
+        <text x="20" y="110" class="text">• Global Error Boundaries</text>
+
+        <!-- State Management -->
+        <rect x="400" y="0" width="300" height="180" rx="5" class="state"/>
+        <text x="550" y="30" text-anchor="middle" class="title">State Management (Redux)</text>
+        <text x="420" y="50" class="text">• Product State (CRUD, Filters, Search)</text>
+        <text x="420" y="70" class="text">• Cart State (Items, Total, Shipping)</text>
+        <text x="420" y="90" class="text">• User State (Auth, Profile, Preferences)</text>
+        <text x="420" y="110" class="text">• Order State (History, Status, Tracking)</text>
+        <text x="420" y="130" class="text">• Blog State (Posts, Comments, Likes)</text>
+        <text x="420" y="150" class="text">• UI State (Theme, Layout, Modals)</text>
+        <text x="420" y="170" class="text">• Async Actions (Loading, Error States)</text>
+
+        <!-- Components -->
+        <rect x="0" y="170" width="300" height="250" rx="5" class="component"/>
+        <text x="150" y="200" text-anchor="middle" class="title">UI Components</text>
+        <text x="20" y="220" class="text">• Navigation (Header, Footer, Sidebar)</text>
+        <text x="20" y="240" class="text">• Product (Cards, Lists, Details)</text>
+        <text x="20" y="260" class="text">• Dashboard (Charts, Stats, Analytics)</text>
+        <text x="20" y="280" class="text">• Map (Interactive, Markers, Search)</text>
+        <text x="20" y="300" class="text">• Common UI (Buttons, Inputs, Modals)</text>
+        <text x="20" y="320" class="text">• Forms (Validation, Dynamic Fields)</text>
+        <text x="20" y="340" class="text">• Blog (Editor, Comments, Share)</text>
+        <text x="20" y="360" class="text">• Layout (Grid, Flex Components)</text>
+        <text x="20" y="380" class="text">• Feedback (Alerts, Toasts, Loading)</text>
+
+        <!-- Pages -->
+        <rect x="400" y="230" width="300" height="280" rx="5" class="route"/>
+        <text x="550" y="260" text-anchor="middle" class="title">Pages/Routes</text>
+        <text x="420" y="280" class="text">• Home (Landing, Featured Items)</text>
+        <text x="420" y="300" class="text">• Product (List, Details, Search)</text>
+        <text x="420" y="320" class="text">• User (Login, Register, Profile)</text>
+        <text x="420" y="340" class="text">• Cart (Items, Checkout Flow)</text>
+        <text x="420" y="360" class="text">• Blog (Posts, Categories, Tags)</text>
+        <text x="420" y="380" class="text">• Dashboard (User, Admin Views)</text>
+        <text x="420" y="400" class="text">• Care Guide (Plants, Instructions)</text>
+        <text x="420" y="420" class="text">• Admin (CRUD Operations)</text>
+        <text x="420" y="440" class="text">• Error (404, 500, Offline)</text>
+        <text x="420" y="460" class="text">• Settings (User Preferences)</text>
+
+        <!-- Features -->
+        <rect x="0" y="470" width="300" height="180" rx="5" class="component"/>
+        <text x="150" y="500" text-anchor="middle" class="title">Special Features</text>
+        <text x="20" y="520" class="text">• 3D Model Viewer (Three.js)</text>
+        <text x="20" y="540" class="text">• AR View (WebXR API)</text>
+        <text x="20" y="560" class="text">• Plant Identifier (ML Model)</text>
+        <text x="20" y="580" class="text">• Interactive Map (Leaflet)</text>
+        <text x="20" y="600" class="text">• Chat System (WebSocket)</text>
+        <text x="20" y="620" class="text">• PWA Support (Service Worker)</text>
+
+        <!-- Utils & Services -->
+        <rect x="400" y="560" width="300" height="180" rx="5" class="component"/>
+        <text x="550" y="590" text-anchor="middle" class="title">Utils & Services</text>
+        <text x="420" y="610" class="text">• API Client (Axios, Error Handling)</text>
+        <text x="420" y="630" class="text">• Auth Service (JWT, OAuth)</text>
+        <text x="420" y="650" class="text">• Image Service (Upload, Optimize)</text>
+        <text x="420" y="670" class="text">• Form Validation (Yup, Formik)</text>
+        <text x="420" y="690" class="text">• Analytics (Events, Tracking)</text>
+        <text x="420" y="710" class="text">• Cache Service (Local Storage)</text>
+
+        <!-- Connections with Labels -->
+        <!-- Core to State -->
+        <path d="M 300 60 C 350 60, 350 90, 400 90" class="arrow" marker-end="url(#arrowhead)"/>
+        <text x="340" y="50" class="arrow-text">State Updates</text>
+
+        <!-- Core to Components -->
+        <path d="M 150 120 L 150 170" class="arrow" marker-end="url(#arrowhead)"/>
+        <text x="160" y="150" class="arrow-text">Renders</text>
+
+        <!-- Components to State -->
+        <path d="M 300 295 C 350 295, 350 180, 400 180" class="arrow" marker-end="url(#arrowhead)"/>
+        <text x="320" y="260" class="arrow-text">Dispatches Actions</text>
+
+        <!-- Components to Pages -->
+        <path d="M 300 295 L 400 370" class="arrow" marker-end="url(#arrowhead)"/>
+        <text x="320" y="350" class="arrow-text">Composes</text>
+
+        <!-- State to Pages -->
+        <path d="M 550 180 L 550 230" class="arrow" marker-end="url(#arrowhead)"/>
+        <text x="560" y="210" class="arrow-text">Provides Data</text>
+
+        <!-- Features to Components -->
+        <path d="M 150 470 L 150 420" class="arrow" marker-end="url(#arrowhead)"/>
+        <text x="160" y="450" class="arrow-text">Enhances</text>
+
+        <!-- Utils to Components -->
+        <path d="M 400 650 C 350 650, 350 295, 300 295" class="arrow" marker-end="url(#arrowhead)"/>
+        <text x="320" y="630" class="arrow-text">Supports</text>
+
+        <!-- Utils to State -->
+        <path d="M 550 560 C 550 500, 650 300, 700 90" class="arrow" marker-end="url(#arrowhead)"/>
+        <text x="660" y="300" class="arrow-text">API Calls</text>
+    </g>
+</svg> 

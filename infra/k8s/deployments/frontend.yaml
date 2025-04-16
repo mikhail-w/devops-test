@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bonsai-frontend
+  namespace: bonsai
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bonsai-frontend
+  template:
+    metadata:
+      labels:
+        app: bonsai-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: ghcr.io/${GITHUB_REPOSITORY}/frontend:latest
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: "500m"
+            memory: 512Mi
+          requests:
+            cpu: "250m"
+            memory: 256Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5 

@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bonsai-backend
+  namespace: bonsai
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bonsai-backend
+  template:
+    metadata:
+      labels:
+        app: bonsai-backend
+    spec:
+      containers:
+      - name: backend
+        image: ghcr.io/${GITHUB_REPOSITORY}/backend:latest
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - configMapRef:
+            name: bonsai-config
+        - secretRef:
+            name: bonsai-secrets
+        resources:
+          limits:
+            cpu: "1"
+            memory: 1Gi
+          requests:
+            cpu: "500m"
+            memory: 512Mi
+        volumeMounts:
+        - name: media-volume
+          mountPath: /app/media
+        - name: static-volume
+          mountPath: /app/staticfiles
+        livenessProbe:
+          httpGet:
+            path: /health/
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health/
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 5
+        startupProbe:
+          httpGet:
+            path: /health/
+            port: 8000
+          failureThreshold: 30
+          periodSeconds: 10
+      volumes:
+      - name: media-volume
+        persistentVolumeClaim:
+          claimName: bonsai-media-pvc
+      - name: static-volume
+        persistentVolumeClaim:
+          claimName: bonsai-static-pvc 

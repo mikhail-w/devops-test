@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect width="800" height="600" fill="#f8f9fa"/>
+    
+    <!-- Title -->
+    <text x="400" y="40" text-anchor="middle" font-size="24" font-weight="bold">Infrastructure & CI/CD Architecture</text>
+    
+    <!-- Source Control -->
+    <g transform="translate(50,80)">
+        <rect width="700" height="120" rx="10" fill="#e9ecef" stroke="#495057"/>
+        <text x="350" y="30" text-anchor="middle" font-size="16" font-weight="bold">Source Control</text>
+        
+        <!-- GitHub -->
+        <rect x="50" y="50" width="150" height="30" rx="5" fill="#228be6" stroke="#1c7ed6"/>
+        <text x="125" y="70" text-anchor="middle" fill="white">GitHub</text>
+        
+        <!-- GitHub Actions -->
+        <rect x="275" y="50" width="150" height="30" rx="5" fill="#40c057" stroke="#37b24d"/>
+        <text x="350" y="70" text-anchor="middle" fill="white">GitHub Actions</text>
+        
+        <!-- Container Registry -->
+        <rect x="500" y="50" width="150" height="30" rx="5" fill="#fab005" stroke="#f59f00"/>
+        <text x="575" y="70" text-anchor="middle" fill="white">Container Registry</text>
+    </g>
+    
+    <!-- Infrastructure as Code -->
+    <g transform="translate(50,220)">
+        <rect width="700" height="120" rx="10" fill="#e9ecef" stroke="#495057"/>
+        <text x="350" y="30" text-anchor="middle" font-size="16" font-weight="bold">Infrastructure as Code</text>
+        
+        <!-- Terraform -->
+        <rect x="50" y="50" width="150" height="30" rx="5" fill="#be4bdb" stroke="#ae3ec9"/>
+        <text x="125" y="70" text-anchor="middle" fill="white">Terraform</text>
+        
+        <!-- AWS Resources -->
+        <rect x="275" y="50" width="150" height="30" rx="5" fill="#228be6" stroke="#1c7ed6"/>
+        <text x="350" y="70" text-anchor="middle" fill="white">AWS Resources</text>
+        
+        <!-- State Management -->
+        <rect x="500" y="50" width="150" height="30" rx="5" fill="#40c057" stroke="#37b24d"/>
+        <text x="575" y="70" text-anchor="middle" fill="white">State Backend</text>
+    </g>
+    
+    <!-- Kubernetes -->
+    <g transform="translate(50,360)">
+        <rect width="700" height="120" rx="10" fill="#e9ecef" stroke="#495057"/>
+        <text x="350" y="30" text-anchor="middle" font-size="16" font-weight="bold">Kubernetes</text>
+        
+        <!-- EKS -->
+        <rect x="50" y="50" width="150" height="30" rx="5" fill="#fa5252" stroke="#f03e3e"/>
+        <text x="125" y="70" text-anchor="middle" fill="white">EKS Cluster</text>
+        
+        <!-- Ingress -->
+        <rect x="275" y="50" width="150" height="30" rx="5" fill="#228be6" stroke="#1c7ed6"/>
+        <text x="350" y="70" text-anchor="middle" fill="white">Ingress Controller</text>
+        
+        <!-- Monitoring -->
+        <rect x="500" y="50" width="150" height="30" rx="5" fill="#40c057" stroke="#37b24d"/>
+        <text x="575" y="70" text-anchor="middle" fill="white">Monitoring</text>
+    </g>
+    
+    <!-- Arrows -->
+    <g stroke="#495057" stroke-width="2" fill="none">
+        <!-- Source to Infrastructure -->
+        <path d="M400,200 L400,220" marker-end="url(#arrowhead)"/>
+        <!-- Infrastructure to Kubernetes -->
+        <path d="M400,340 L400,360" marker-end="url(#arrowhead)"/>
+    </g>
+    
+    <!-- Arrow Marker -->
+    <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#495057"/>
+        </marker>
+    </defs>
+</svg> 

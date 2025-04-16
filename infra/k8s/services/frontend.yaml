@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: bonsai-frontend
+  namespace: bonsai
+spec:
+  selector:
+    app: bonsai-frontend
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP 
