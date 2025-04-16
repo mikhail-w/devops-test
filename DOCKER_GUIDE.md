@@ -50,23 +50,37 @@ Before starting, ensure you have the following installed:
 Create a file named `Dockerfile` in your backend directory with the following content:
 
 ```Dockerfile
-# Stage 1: Install dependencies
-FROM python:3.9-alpine as base
+# Build stage
+FROM python:3.9-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache postgresql-dev gcc python3-dev musl-dev
+
+# Set work directory
+WORKDIR /app
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Second stage
+FROM python:3.9-alpine
+
+# Install runtime dependencies
+RUN apk add --no-cache libpq netcat-openbsd
+
+# Copy installed packages from builder
+COPY --from=builder /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
+# Set work directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apk add --no-cache build-base postgresql-dev
-
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
-
-# Copy project files
+# Copy project
 COPY . .
 
 # Create media directory
@@ -75,34 +89,157 @@ RUN mkdir -p /app/media
 # Create health check endpoint
 RUN echo 'from django.http import HttpResponse\nfrom django.urls import path\n\ndef health(request):\n    return HttpResponse("ok")\n\nurlpatterns = [path("health/", health)]' > health_check/urls.py
 
-# Run migrations and collect static files
-RUN python manage.py collectstatic --noinput
+# Make entrypoint script executable
+RUN chmod +x /app/entrypoint.sh
+
+# Set the entrypoint
+ENTRYPOINT ["/app/entrypoint.sh"]
 
 # Run gunicorn server
 CMD ["gunicorn", "backend.wsgi:application", "--bind", "0.0.0.0:8000"]
 ```
+
+This Dockerfile uses a multi-stage build approach to create a smaller, more secure production image:
+
+1. **First Stage (Builder)**:
+   - Uses `python:3.9-alpine` as the base image
+   - Installs build dependencies needed for compiling Python packages
+   - Installs Python packages from requirements.txt without caching (`--no-cache-dir`)
+
+2. **Second Stage (Runtime)**:
+   - Starts fresh with a new `python:3.9-alpine` image
+   - Installs only runtime dependencies
+   - Copies only the necessary Python packages from the builder stage
+   - Sets up the application environment
+
+Benefits of this approach:
+- Smaller final image size (build dependencies are not included)
+- Better security (fewer packages in the final image)
+- Cleaner separation between build and runtime environments
+- Follows Docker best practices for production deployments
 
 ### Step 2: Create a `.dockerignore` file
 
 In the same directory, create a `.dockerignore` to exclude unnecessary files:
 
 ```
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
 .env
 .venv
-env/
 venv/
 ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git
 .git
 .gitignore
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Local development
+*.log
+local_settings.py
+db.sqlite3
 media/
 static/
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Documentation
+docs/
+*.md
+LICENSE
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
 ```
 
-### Step 3: Test the Backend Container
+### Step 3: Create an Entrypoint Script
+
+Create a file named `entrypoint.sh` in your backend directory:
+
+```bash
+#!/bin/sh
+
+# Wait for the database to be ready
+echo "Waiting for PostgreSQL to be ready..."
+while ! nc -z db 5432; do
+  sleep 0.1
+done
+echo "PostgreSQL is ready!"
+
+# Apply database migrations
+echo "Applying database migrations..."
+python manage.py migrate
+
+# Load fixtures in the correct order
+echo "Loading fixtures..."
+python manage.py loaddata users.json
+python manage.py loaddata products.json
+python manage.py loaddata posts.json
+python manage.py loaddata reviews.json
+python manage.py loaddata comments.json
+
+# Create superuser if it doesn't exist
+echo "Creating superuser if it doesn't exist..."
+python manage.py shell -c "
+from django.contrib.auth import get_user_model;
+User = get_user_model();
+if not User.objects.filter(username='${ADMIN_USERNAME:-admin}').exists():
+    User.objects.create_superuser(
+        '${ADMIN_USERNAME:-admin}', 
+        '${ADMIN_EMAIL:-admin@mail.com}', 
+        '${ADMIN_PASSWORD:-admin}'
+    )
+"
+
+# Start the application
+echo "Starting the application..."
+exec "$@"
+```
+
+Make the script executable:
+
+```bash
+chmod +x apps/backend/entrypoint.sh
+```
+
+### Step 4: Test the Backend Container
 
 Build and run the backend container to ensure it works correctly:
 
@@ -123,15 +260,15 @@ Visit http://localhost:8000 in your browser to verify the backend is running.
 Create a file named `Dockerfile` in your frontend directory:
 
 ```Dockerfile
-# Stage 1: Build React App
-FROM node:16-alpine as build
+# Build stage
+FROM node:16-alpine AS builder
 
 # Set working directory
 WORKDIR /app
 
 # Install dependencies
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 # Copy project files
 COPY . .
@@ -139,33 +276,138 @@ COPY . .
 # Build the app
 RUN npm run build
 
-# Stage 2: Serve with Nginx
+# Production stage
 FROM nginx:alpine
 
 # Copy built files to Nginx
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Copy custom Nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Create health check endpoint
+RUN echo '<!DOCTYPE html><html><head><title>Health Check</title></head><body><h1>OK</h1></body></html>' > /usr/share/nginx/html/health
 
 EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]
 ```
 
+This Dockerfile uses a multi-stage build approach:
+
+1. **First Stage (Builder)**:
+   - Uses `node:16-alpine` as the base image
+   - Installs dependencies using `npm ci` for consistent installations
+   - Builds the React application
+
+2. **Second Stage (Production)**:
+   - Uses `nginx:alpine` as the base image
+   - Copies only the built files from the builder stage
+   - Sets up Nginx to serve the static files
+   - Creates a health check endpoint
+
 ### Step 2: Create a `.dockerignore` file
 
 In the frontend directory, create a `.dockerignore`:
 
 ```
+# Dependencies
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Testing
+coverage/
+.nyc_output/
+
+# Production build
 build/
 dist/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git
 .git
 .gitignore
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Logs
+logs/
+*.log
+
+# Cache
+.cache/
+.npm/
+.eslintcache
+
+# Documentation
+docs/
+*.md
+LICENSE
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 ```
 
-### Step 3: Test the Frontend Container
+### Step 3: Create Nginx Configuration
+
+Create a file named `nginx.conf` in your frontend directory:
+
+```nginx
+server {
+    listen 80;
+    server_name localhost;
+
+    location / {
+        root /usr/share/nginx/html;
+        index index.html;
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /health {
+        access_log off;
+        return 200 'ok';
+    }
+
+    # Proxy API requests to the backend
+    location /api/ {
+        proxy_pass http://backend:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+### Step 4: Test the Frontend Container
 
 Build and run the frontend container:
 
@@ -192,6 +434,15 @@ services:
       context: ./apps/backend
       dockerfile: Dockerfile
     env_file: .env
+    environment:
+      - DEBUG=${DEBUG}
+      - SECRET_KEY=${SECRET_KEY}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
     volumes:
       - ./apps/backend:/app
       - media_volume:/app/media
@@ -212,6 +463,10 @@ services:
     build:
       context: ./apps/frontend
       dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      - REACT_APP_API_URL=${API_URL}
+      - REACT_APP_DEBUG=${DEBUG}
     ports:
       - "3000:80"
     depends_on:
@@ -229,6 +484,10 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     env_file: .env
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
     ports:
       - "5432:5432"
     healthcheck:
@@ -308,195 +567,19 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 ## 🗄️ Database Initialization
 
-After setting up your Docker environment, you'll need to initialize the database with the required data. There are two approaches: manual and automated.
+The database initialization is now handled automatically by the entrypoint script in the backend container. This script:
 
-### Approach 1: Automated Fixture Loading (Recommended)
+1. Waits for the PostgreSQL database to be ready
+2. Applies database migrations
+3. Loads fixtures in the correct order:
+   - users.json
+   - products.json
+   - posts.json
+   - reviews.json
+   - comments.json
+4. Creates a Django superuser if it doesn't exist
 
-To automate the fixture loading process, we'll create an entrypoint script that runs migrations and loads fixtures during container startup.
-
-#### Step 1: Create an Entrypoint Script
-
-Create a file named `entrypoint.sh` in your backend directory:
-
-```bash
-#!/bin/sh
-
-# Wait for the database to be ready
-echo "Waiting for PostgreSQL to be ready..."
-while ! nc -z db 5432; do
-  sleep 0.1
-done
-echo "PostgreSQL is ready!"
-
-# Apply database migrations
-echo "Applying database migrations..."
-python manage.py migrate
-
-# Load fixtures in the correct order
-echo "Loading fixtures..."
-python manage.py loaddata users.json
-python manage.py loaddata products.json
-python manage.py loaddata posts.json
-python manage.py loaddata reviews.json
-python manage.py loaddata comments.json
-
-# Create superuser if it doesn't exist
-echo "Creating superuser if it doesn't exist..."
-python manage.py shell -c "
-from django.contrib.auth import get_user_model;
-User = get_user_model();
-if not User.objects.filter(username='admin').exists():
-    User.objects.create_superuser('admin', 'admin@mail.com', 'admin')
-"
-
-# Start the application
-echo "Starting the application..."
-exec "$@"
-```
-
-Make the script executable:
-
-```bash
-chmod +x apps/backend/entrypoint.sh
-```
-
-#### Step 2: Update the Backend Dockerfile
-
-Modify your backend Dockerfile to use the entrypoint script:
-
-```Dockerfile
-# Stage 1: Install dependencies
-FROM python:3.9-alpine as base
-
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-
-WORKDIR /app
-
-# Install system dependencies
-RUN apk add --no-cache build-base postgresql-dev netcat-openbsd
-
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
-
-# Copy project files
-COPY . .
-
-# Create media directory
-RUN mkdir -p /app/media
-
-# Create health check endpoint
-RUN echo 'from django.http import HttpResponse\nfrom django.urls import path\n\ndef health(request):\n    return HttpResponse("ok")\n\nurlpatterns = [path("health/", health)]' > health_check/urls.py
-
-# Make entrypoint script executable
-RUN chmod +x /app/entrypoint.sh
-
-# Set the entrypoint
-ENTRYPOINT ["/app/entrypoint.sh"]
-
-# Run gunicorn server
-CMD ["gunicorn", "backend.wsgi:application", "--bind", "0.0.0.0:8000"]
-```
-
-#### Step 3: Update docker-compose.yml
-
-Update your docker-compose.yml to use the entrypoint script:
-
-```yaml
-version: '3.8'
-
-services:
-  backend:
-    build: 
-      context: ./apps/backend
-      dockerfile: Dockerfile
-    env_file: .env
-    volumes:
-      - ./apps/backend:/app
-      - media_volume:/app/media
-    ports:
-      - "8000:8000"
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
-    # The entrypoint script will be used automatically
-```
-
-### Approach 2: Manual Fixture Loading
-
-If you prefer to load fixtures manually or need more control over the process, you can follow these steps:
-
-#### Step 1: Run Migrations
-
-First, ensure your database is properly migrated:
-
-```bash
-# Connect to the backend container
-docker compose exec backend bash
-
-# Run migrations
-python manage.py makemigrations
-python manage.py migrate
-
-# Exit the container
-exit
-```
-
-#### Step 2: Load Fixtures
-
-The Bonsai application requires several fixtures to be loaded in a specific order due to model dependencies:
-
-```bash
-# Connect to the backend container
-docker compose exec backend bash
-
-# First load users (since other models depend on them)
-python manage.py loaddata users.json
-
-# Then load products
-python manage.py loaddata products.json
-
-# Then load posts
-python manage.py loaddata posts.json
-
-# Then load reviews (which depend on users and products)
-python manage.py loaddata reviews.json
-
-# Finally load comments (which depend on users and posts)
-python manage.py loaddata comments.json
-
-# Exit the container
-exit
-```
-
-#### Step 3: Create Django Superuser
-
-To access the Django admin panel, you need to create a superuser account:
-
-```bash
-# Connect to the backend container
-docker compose exec backend bash
-
-# Create superuser
-python manage.py createsuperuser
-
-# Follow the prompts to set up your admin account:
-# - Enter a username (e.g., 'admin')
-# - Provide an email address
-# - Create a strong password
-
-# Exit the container
-exit
-```
+This automated approach ensures that your database is properly initialized every time the containers start, making the process more reliable and repeatable.
 
 ### Verifying Database Setup
 
@@ -519,6 +602,8 @@ SELECT COUNT(*) FROM blog_comment;
 # Exit PostgreSQL
 \q
 ```
+
+---
 
 ## 🔐 Secrets and Environment Variables Management
 
@@ -1050,10 +1135,12 @@ bonsai/
 │       ├── Dockerfile
 │       ├── Dockerfile.dev
 │       ├── .dockerignore
+│       ├── nginx.conf
 │       └── ...
 ├── docker-compose.yml
 ├── docker-compose.dev.yml
 ├── docker-compose.prod.yml
+├── .env.example
 └── README.md
 ```
 

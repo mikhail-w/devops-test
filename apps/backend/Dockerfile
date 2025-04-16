@@ -15,11 +15,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 FROM python:3.9-alpine
 
 # Install runtime dependencies
-RUN apk add --no-cache libpq
+RUN apk add --no-cache libpq netcat-openbsd
 
 # Copy installed packages from builder
 COPY --from=builder /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
 
 # Set work directory
 WORKDIR /app
@@ -30,14 +34,14 @@ COPY . .
 # Create media directory
 RUN mkdir -p /app/media
 
-# Expose port
-EXPOSE 8000
-
 # Create health check endpoint
 RUN echo 'from django.http import HttpResponse\nfrom django.urls import path\n\ndef health(request):\n    return HttpResponse("ok")\n\nurlpatterns = [path("health/", health)]' > health_check/urls.py
 
-# Run migrations and collect static files
-RUN python manage.py collectstatic --noinput
+# Make entrypoint script executable
+RUN chmod +x /app/entrypoint.sh
 
-# Run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "backend.wsgi:application"] 
+# Set the entrypoint
+ENTRYPOINT ["/app/entrypoint.sh"]
+
+# Run gunicorn server
+CMD ["gunicorn", "backend.wsgi:application", "--bind", "0.0.0.0:8000"] 
