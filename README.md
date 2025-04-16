@@ -27,9 +27,12 @@ Ensure you configure your environment variables for both the **frontend** and **
 
 ### Frontend (`.env` in `apps/frontend/`)
 ```env
+# Environment Configuration
+VITE_ENV=development
+
 # API Configuration
 VITE_API_BASE_URL=http://127.0.0.1:8000
-VITE_API_URL=http://127.0.0.1:8000/api
+VITE_API_URL=http://127.0.0.1:8000/api/
 
 # External Services (Replace with your own API keys in production)
 VITE_WEATHER_API_KEY=your_open-weather_api_key
