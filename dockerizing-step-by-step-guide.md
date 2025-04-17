@@ -168,24 +168,66 @@ networks:
 
 ## Step 3: Configure Environment Variables
 
-Create `.env` file in the root directory:
-```bash
-# Django Settings
-DEBUG=True
-DJANGO_SECRET_KEY=your-secret-key-here
-ALLOWED_HOSTS=localhost,127.0.0.1
+Create `.env` file in the root directory with the following variables:
 
-# Database Settings
+```bash
+# Database Configuration
 DB_NAME=bonsai_db
 DB_USER=postgres
 DB_PASSWORD=postgres
 DB_HOST=db
 DB_PORT=5432
 
-# Frontend Settings
-REACT_APP_API_URL=http://localhost:8000/api
-REACT_APP_DEBUG=true
+# Django Configuration
+DEBUG=True
+SECRET_KEY=your-secret-key-here
+ALLOWED_HOSTS=localhost,127.0.0.1
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+
+# Admin User Configuration
+ADMIN_USERNAME=admin
+ADMIN_EMAIL=admin@mail.com
+ADMIN_PASSWORD=admin
+
+# API Configuration
+API_URL=http://localhost:8000/api
+
+# Email Configuration (optional, required for password reset functionality)
+EMAIL_HOST=smtp.mail.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=your_email@mail.com
+EMAIL_HOST_PASSWORD=your_email_password
+EMAIL_USE_TLS=True
+
+# Frontend Configuration
+VITE_WEATHER_API_KEY=your_weather_api_key
+VITE_PAYPAL_CLIENT_ID=your_paypal_client_id
+VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+VITE_GOOGLE_CLOUD_VISION_API_KEY=your_google_cloud_vision_api_key
+
+# AWS Configuration (required for production deployment)
+AWS_ACCESS_KEY_ID=your_aws_access_key
+AWS_SECRET_ACCESS_KEY=your_aws_secret_key
+AWS_STORAGE_BUCKET_NAME=your_bucket_name
+AWS_S3_REGION_NAME=your_region
+
+# EKS Configuration (required for Kubernetes deployment)
+EKS_CLUSTER_NAME=bonsai-cluster
+EKS_NODE_GROUP_NAME=bonsai-node-group
+
+# RDS Configuration (required for production database)
+RDS_INSTANCE_CLASS=db.t3.micro
+RDS_ALLOCATED_STORAGE=20
+RDS_MULTI_AZ=false
 ```
+
+Important Notes:
+1. Replace all placeholder values (like 'your-secret-key-here') with actual secure values
+2. For development, you can use simpler values for database credentials
+3. Email configuration is optional but required for password reset functionality
+4. API keys should be kept secure and not committed to version control
+5. AWS configuration is only needed for production deployment
+6. Make sure to add .env to your .gitignore file to prevent committing sensitive information
 
 ## Step 4: Build and Start the Services
 
