@@ -14,12 +14,15 @@ export const getImagePath = imagePath => {
     return imagePath;
   }
   
-  // Remove any leading slashes from the image path
-  const cleanPath = imagePath.replace(/^\/+/, '');
+  // Get environment configuration for media URL
+  const mediaUrl = import.meta.env.VITE_MEDIA_URL || `${import.meta.env.VITE_API_BASE_URL}/media/`;
   
-  // Ensure the path includes "media" if not already there
-  const mediaPath = cleanPath.startsWith('media/') ? cleanPath : `media/${cleanPath}`;
+  // Remove leading/trailing slashes and clean up the path
+  const cleanPath = imagePath
+    .replace(/^\/+|\/+$/g, '') // Remove leading/trailing slashes
+    .replace(/^media\/|\/media\//g, '') // Remove media prefixes/suffixes
+    .replace(/\/+/g, '/'); // Replace multiple slashes with single
   
-  // Add the base URL
-  return `${import.meta.env.VITE_API_BASE_URL}/${mediaPath}`;
+  // Combine the media URL with the cleaned path
+  return `${mediaUrl.replace(/\/+$/, '')}/${cleanPath}`;
 };
