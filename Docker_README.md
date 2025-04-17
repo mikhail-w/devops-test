@@ -1,6 +1,157 @@
-# Bonsai DevOps Project
+# Bonsai DevOps Project - Docker Setup
 
-This project implements a complete DevOps infrastructure for a web application using modern cloud-native technologies. It includes a Django backend, React frontend, and Kubernetes-based deployment on AWS EKS.
+This project implements a complete DevOps infrastructure for a web application using modern cloud-native technologies. It includes a Django backend, React frontend, and Docker-based deployment.
+
+## Project Structure
+
+```
+.
+├── apps/
+│   ├── backend/           # Django backend application
+│   │   ├── Dockerfile    # Backend container configuration
+│   │   └── entrypoint.sh # Container startup script
+│   └── frontend/         # React frontend application
+│       └── Dockerfile    # Frontend container configuration
+├── docker-compose.yml    # Multi-container orchestration
+└── .env                  # Environment variables
+```
+
+## Quick Start
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd bonsai-devops
+```
+
+2. Create and configure the `.env` file:
+```bash
+cp .env.example .env
+# Edit .env with your configuration
+```
+
+3. Build and start the containers:
+```bash
+docker-compose build
+docker-compose up -d
+```
+
+4. Initialize the database:
+```bash
+docker-compose exec backend python manage.py migrate
+docker-compose exec backend python manage.py createsuperuser
+```
+
+5. Access the application:
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000/api
+- Django Admin: http://localhost:8000/admin
+
+## Development Workflow
+
+### Starting Development
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+```
+
+### Making Changes
+- Backend changes are automatically reflected due to volume mounting
+- Frontend changes are automatically reflected due to volume mounting
+- Database changes require migrations:
+```bash
+docker-compose exec backend python manage.py makemigrations
+docker-compose exec backend python manage.py migrate
+```
+
+### Stopping Services
+```bash
+# Stop all services
+docker-compose down
+
+# Stop and remove volumes
+docker-compose down -v
+```
+
+## Production Deployment
+
+For production deployment, you'll need to:
+
+1. Update the `.env` file with production settings
+2. Build production-ready images:
+```bash
+docker-compose -f docker-compose.prod.yml build
+```
+
+3. Push images to your registry:
+```bash
+docker-compose -f docker-compose.prod.yml push
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Port Conflicts**
+   - Ensure ports 3000, 8000, and 5432 are not in use
+   - Check with: `netstat -tuln | grep <port>`
+
+2. **Database Connection Issues**
+   - Verify database credentials in `.env`
+   - Check database logs: `docker-compose logs db`
+
+3. **Container Startup Issues**
+   - Check container logs: `docker-compose logs <service>`
+   - Verify environment variables: `docker-compose config`
+
+### Useful Commands
+
+```bash
+# View running containers
+docker-compose ps
+
+# View logs
+docker-compose logs -f
+
+# Execute commands in containers
+docker-compose exec backend python manage.py <command>
+docker-compose exec frontend npm <command>
+
+# Rebuild specific service
+docker-compose build <service>
+
+# Restart specific service
+docker-compose restart <service>
+
+# Clean up
+docker-compose down -v
+docker system prune -a
+```
+
+## Best Practices
+
+1. **Environment Variables**
+   - Never commit `.env` files
+   - Use `.env.example` as a template
+   - Keep sensitive data secure
+
+2. **Docker Images**
+   - Use multi-stage builds
+   - Minimize layer count
+   - Use specific version tags
+
+3. **Development**
+   - Use volume mounts for hot-reloading
+   - Keep containers up-to-date
+   - Use Docker Compose for local development
+
+4. **Security**
+   - Use non-root users in containers
+   - Keep images updated
+   - Use secrets for sensitive data
 
 ## What is Docker?
 
@@ -25,32 +176,6 @@ DockerHub is a cloud-based registry service that allows you to download Docker i
 3. **Automation**: Integrate with CI/CD pipelines for automated builds and deployments.
 4. **Collaboration**: Share images with team members and the Docker community.
 5. **Security**: Scan images for vulnerabilities and manage access control.
-
-## Project Structure
-
-```
-.
-├── apps/
-│   ├── backend/           # Django backend application
-│   └── frontend/          # React frontend application
-├── infra/
-│   ├── k8s/              # Kubernetes manifests
-│   │   ├── deployments/  # Deployment configurations
-│   │   ├── services/     # Service configurations
-│   │   └── ...          # Other K8s resources
-│   └── terraform/        # Infrastructure as Code
-│       ├── modules/      # Terraform modules
-│       └── ...          # Terraform configurations
-└── .github/workflows/    # CI/CD pipelines
-```
-
-## Docker in This Project
-
-This project uses Docker for:
-1. **Development Environment**: Local development using Docker Compose
-2. **Production Deployment**: Containerized applications deployed to Kubernetes
-3. **CI/CD Pipeline**: Automated builds and deployments
-4. **Image Distribution**: Publishing images to DockerHub
 
 ## Dockerizing the Frontend
 
@@ -252,6 +377,34 @@ volumes:
   postgres_data:
   media_volume:
 ```
+
+### Media File Handling
+
+The application includes a robust media file handling system with the following features:
+
+1. **Environment Variables**:
+   ```env
+   # Media Configuration
+   VITE_MEDIA_URL=http://localhost:8000/media/
+   VITE_API_BASE_URL=http://localhost:8000
+   VITE_S3_PATH=https://your-s3-bucket.s3.amazonaws.com
+   ```
+
+2. **Media Volume**:
+   - The `media_volume` is mounted to `/app/media` in the backend container
+   - This ensures persistent storage of uploaded media files
+   - Files are accessible through the Django media server in development
+   - In production, files are served through S3/CloudFront
+
+3. **Image Handling Components**:
+   - `S3ImageHandler.jsx`: React component for displaying images
+   - `urlUtils.js`: URL cleaning and formatting utilities
+   - `imageUtils.js`: Image path manipulation helpers
+
+4. **Debugging Tools**:
+   - Use `debugImagePath()` function to troubleshoot image paths
+   - Environment variable logging for media configuration
+   - Path normalization and cleaning utilities
 
 ### Using Docker Compose
 

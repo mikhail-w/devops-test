@@ -74,7 +74,7 @@ const QuoteContent = ({ quote }) => {
         lineHeight="tall"
         textAlign="center"
       >
-        "{quote.content}"
+        "{quote.text}"
       </Text>
       <Text fontSize="md" fontWeight="medium" color={authorColor}>
         — {quote.author}

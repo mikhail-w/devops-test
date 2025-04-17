@@ -98,14 +98,20 @@ const MapMarkerInfoWindow = ({
         overflow="hidden"
       >
         <VStack align="stretch" spacing={0}>
+          // In MapMarkerInfoWindow.jsx
           <Image
-            src={selectedMarker.photo}
+            src={selectedMarker.photo || DefaultImg}
             alt={`${selectedMarker.name} thumbnail`}
             height="auto"
             maxHeight="180px"
             objectFit="cover"
             width="100%"
             maxWidth="100%"
+            onError={(e) => {
+              e.target.src = DefaultImg;
+              e.target.onerror = null;
+            }}
+            fallback={<Box height="180px" width="100%" bg="gray.200" />}
           />
 
           <Box backgroundColor={bgColor} p={4}>

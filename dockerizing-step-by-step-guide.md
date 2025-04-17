@@ -7,158 +7,278 @@
 ## Step 1: Create Docker Configuration Files
 
 ### 1. Dockerfile for Backend
-Create `apps/backend/Dockerfile` with the configuration provided.
+Create `apps/backend/Dockerfile`:
+```dockerfile
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Set work directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    postgresql-client \
+    curl \
+    netcat-traditional \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt /app/
+RUN pip install --upgrade pip && pip install -r requirements.txt
+
+# Copy project
+COPY . /app/
+
+# Create media and static directories
+RUN mkdir -p /app/media /app/staticfiles
+
+# Make entrypoint script executable
+COPY entrypoint.sh /app/
+RUN chmod +x /app/entrypoint.sh
+
+# Run entrypoint script
+ENTRYPOINT ["/app/entrypoint.sh"]
+
+# Default command
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+```
 
 ### 2. Entrypoint Script
-Create `apps/backend/entrypoint.sh` and make it executable:
+Create `apps/backend/entrypoint.sh`:
 ```bash
-chmod +x apps/backend/entrypoint.sh
+#!/bin/sh
+
+# Wait for PostgreSQL
+echo "Waiting for PostgreSQL..."
+while ! nc -z $DB_HOST $DB_PORT; do
+  sleep 0.1
+done
+echo "PostgreSQL started"
+
+# Run migrations
+python manage.py migrate
+
+# Collect static files
+python manage.py collectstatic --noinput
+
+# Start server
+exec "$@"
 ```
 
-### 3. .dockerignore File
-Create `apps/backend/.dockerignore` to exclude unnecessary files.
+### 3. Dockerfile for Frontend
+Create `apps/frontend/Dockerfile`:
+```dockerfile
+FROM node:16-alpine
 
-## Step 2: Configure Environment Variables
+# Set work directory
+WORKDIR /app
 
-1. Copy the example environment file:
-```bash
-cp .env.example .env
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy project files
+COPY . .
+
+# Expose port
+EXPOSE 3000
+
+# Start development server
+CMD ["npm", "start"]
 ```
 
-2. Modify the `.env` file to match your requirements:
-   - Set a secure `DJANGO_SECRET_KEY`
-   - Configure database settings
-   - Set OpenAI API key if you're using the chatbot functionality
-   - Configure AWS S3 if you're using it for storage
+## Step 2: Create Docker Compose Configuration
 
-## Step 3: Start the Docker Containers
+Create `docker-compose.yml` in the root directory:
+```yaml
+version: '3.8'
 
-1. Build and start the containers:
+services:
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: bonsai-backend
+    restart: unless-stopped
+    volumes:
+      - ./apps/backend:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    networks:
+      - bonsai_network
+    command: >
+      sh -c "python manage.py wait_for_db &&
+             python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+    container_name: bonsai-frontend
+    restart: unless-stopped
+    volumes:
+      - ./apps/frontend:/app
+      - /app/node_modules
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - bonsai_network
+    command: sh -c "npm start"
+
+  db:
+    image: postgres:13-alpine
+    container_name: bonsai-db
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    networks:
+      - bonsai_network
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
+
+networks:
+  bonsai_network:
+    driver: bridge
+```
+
+## Step 3: Configure Environment Variables
+
+Create `.env` file in the root directory:
 ```bash
+# Django Settings
+DEBUG=True
+DJANGO_SECRET_KEY=your-secret-key-here
+ALLOWED_HOSTS=localhost,127.0.0.1
+
+# Database Settings
+DB_NAME=bonsai_db
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_HOST=db
+DB_PORT=5432
+
+# Frontend Settings
+REACT_APP_API_URL=http://localhost:8000/api
+REACT_APP_DEBUG=true
+```
+
+## Step 4: Build and Start the Services
+
+```bash
+# Build all services
 docker-compose build
+
+# Start all services
 docker-compose up -d
-```
 
-2. Check if all services are running properly:
-```bash
+# Check service status
 docker-compose ps
+
+# View logs
+docker-compose logs -f
 ```
 
-3. Check the logs to ensure everything started correctly:
-```bash
-docker-compose logs -f backend
-```
+## Step 5: Initialize the Database
 
-## Step 4: Initialize the Database
-
-The entrypoint script automatically:
-- Runs migrations
-- Collects static files
-- Creates a superuser (if credentials are provided in the env file)
-- Loads initial data (if `LOAD_INITIAL_DATA=True`)
-
-You can manually run these commands if needed:
 ```bash
 # Run migrations
 docker-compose exec backend python manage.py migrate
 
-# Collect static files
-docker-compose exec backend python manage.py collectstatic --noinput
-
 # Create superuser
 docker-compose exec backend python manage.py createsuperuser
 
-# Load fixture data
-docker-compose exec backend python manage.py loaddata users.json products.json reviews.json
+# Collect static files
+docker-compose exec backend python manage.py collectstatic --noinput
 ```
 
-## Step 5: Access Your Application
+## Step 6: Access Your Application
 
-- Django backend: http://localhost:8000/
-- Django admin: http://localhost:8000/admin/
-- Frontend: http://localhost:3000/
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000/api
+- Django Admin: http://localhost:8000/admin
+- API Documentation: http://localhost:8000/api/docs
 
-## Step 6: Working with Docker
+## Step 7: Development Workflow
 
-### Running Management Commands
+### Making Changes
+- Backend changes are automatically reflected due to volume mounting
+- Frontend changes are automatically reflected due to volume mounting
+- Database changes require migrations:
 ```bash
-# Create new app
-docker-compose exec backend python manage.py startapp new_app
-
-# Make migrations
 docker-compose exec backend python manage.py makemigrations
-
-# Django shell
-docker-compose exec backend python manage.py shell
+docker-compose exec backend python manage.py migrate
 ```
 
-### Database Operations
+### Stopping Services
 ```bash
-# Access PostgreSQL
-docker-compose exec db psql -U postgres -d bonsai_store
-
-# Backup Database
-docker-compose exec db pg_dump -U postgres bonsai_store > backup_$(date +%Y-%m-%d).sql
-
-# Restore Database
-cat backup_file.sql | docker-compose exec -T db psql -U postgres bonsai_store
-```
-
-### Stopping and Restarting
-```bash
-# Stop containers
+# Stop all services
 docker-compose down
 
-# Start containers
-docker-compose up -d
-
-# Restart a specific service
-docker-compose restart backend
+# Stop and remove volumes
+docker-compose down -v
 ```
-
-## Step 7: Production Deployment Considerations
-
-For production deployment, consider the following adjustments:
-
-1. Update environment variables:
-   - Set `DJANGO_DEBUG=False`
-   - Use strong, unique passwords
-   - Set proper `DJANGO_ALLOWED_HOSTS`
-
-2. Configure Gunicorn as the WSGI server instead of Django's development server:
-   - Change the CMD in the Dockerfile to:
-     ```
-     CMD ["gunicorn", "--bind", "0.0.0.0:8000", "backend.wsgi:application"]
-     ```
-
-3. Consider adding Nginx as a reverse proxy
-
-4. Set up SSL certificates for secure connections
-
-5. Implement proper logging and monitoring
-
-6. Configure automated database backups
 
 ## Troubleshooting
 
-### Container Won't Start
-Check the logs:
-```bash
-docker-compose logs backend
-```
+### Common Issues
 
-### Database Connection Issues
-1. Verify environment variables in `.env`
-2. Make sure the database container is running: 
-```bash
-docker-compose ps db
-```
-3. Check database logs:
-```bash
-docker-compose logs db
-```
+1. **Port Conflicts**
+   - Ensure ports 3000, 8000, and 5432 are not in use
+   - Check with: `netstat -tuln | grep <port>`
 
-### Static or Media Files Not Loading
-1. Verify volume mounts in `docker-compose.yml`
-2. Check Django settings for proper static and media configurations
-3. Ensure `collectstatic` ran successfully
+2. **Database Connection Issues**
+   - Verify database credentials in `.env`
+   - Check database logs: `docker-compose logs db`
+
+3. **Container Startup Issues**
+   - Check container logs: `docker-compose logs <service>`
+   - Verify environment variables: `docker-compose config`
+
+### Useful Commands
+
+```bash
+# View running containers
+docker-compose ps
+
+# View logs
+docker-compose logs -f
+
+# Execute commands in containers
+docker-compose exec backend python manage.py <command>
+docker-compose exec frontend npm <command>
+
+# Rebuild specific service
+docker-compose build <service>
+
+# Restart specific service
+docker-compose restart <service>
+
+# Clean up
+docker-compose down -v
+docker system prune -a
+```

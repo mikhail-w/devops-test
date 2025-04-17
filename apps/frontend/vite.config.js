@@ -13,6 +13,9 @@ export default defineConfig(({ mode }) => {
   
   return {
     plugins: [react()],
+    define: {
+      'process.env.VITE_WEATHER_API_KEY': JSON.stringify(env.VITE_WEATHER_API_KEY)
+    },
     server: {
       host: true,
       port: 3000,

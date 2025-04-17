@@ -37,7 +37,23 @@ python manage.py collectstatic --noinput
 # Create superuser if environment variables are set
 if [ -n "${DJANGO_SUPERUSER_USERNAME}" ] && [ -n "${DJANGO_SUPERUSER_EMAIL}" ] && [ -n "${DJANGO_SUPERUSER_PASSWORD}" ]; then
     echo "Creating superuser..."
-    python manage.py createsuperuser --noinput || echo "Superuser already exists"
+    python manage.py shell -c "
+from django.contrib.auth import get_user_model;
+User = get_user_model();
+try:
+    # Remove any existing superusers
+    User.objects.filter(is_superuser=True).delete()
+    
+    # Create new superuser with correct format
+    User.objects.create_superuser(
+        username='admin',
+        email='admin@mail.com',
+        password='adminpassword'
+    )
+    print('Superuser created successfully')
+except Exception as e:
+    print(f'Error creating superuser: {e}')
+"
 fi
 
 # Load initial data if needed

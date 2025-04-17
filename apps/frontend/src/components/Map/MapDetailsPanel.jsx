@@ -43,9 +43,11 @@ const MapDetailsPanel = ({ selectedLocation, closePanel, isPanelOpen }) => {
               <Image
                 src={selectedLocation.photo || DefaultImg}
                 alt={`${selectedLocation.name} thumbnail`}
-                onError={e => {
+                onError={(e) => {
                   e.target.src = DefaultImg;
+                  e.target.onerror = null;
                 }}
+                fallback={<Box width="100%" height="300px" bg="gray.200" />}
                 borderRadius="md"
                 width="100%"
                 height="100%"

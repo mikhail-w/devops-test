@@ -19,7 +19,7 @@ urlpatterns = [
     path('health/', health_view, name='health'),
 ]
 
-# Always serve media files in development
+# Serve media files
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # Serve static files in development

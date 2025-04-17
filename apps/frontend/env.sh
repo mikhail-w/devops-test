@@ -7,10 +7,15 @@ touch /usr/share/nginx/html/env-config.js
 # Add assignment 
 echo "window._env_ = {" >> /usr/share/nginx/html/env-config.js
 
-# Add static configuration
-echo "  VITE_API_URL: \"http://backend:8000\"," >> /usr/share/nginx/html/env-config.js
-echo "  VITE_API_VERSION: \"v1\"," >> /usr/share/nginx/html/env-config.js
-echo "  VITE_MEDIA_URL: \"http://backend:8000/media/\"," >> /usr/share/nginx/html/env-config.js
-echo "  VITE_STATIC_URL: \"http://backend:8000/static/\"," >> /usr/share/nginx/html/env-config.js
+# Add environment variables
+echo "  VITE_API_URL: \"${VITE_API_URL}\"," >> /usr/share/nginx/html/env-config.js
+echo "  VITE_API_URL_PUBLIC: \"${VITE_API_URL_PUBLIC}\"," >> /usr/share/nginx/html/env-config.js
+echo "  VITE_WEATHER_API_KEY: \"${VITE_WEATHER_API_KEY}\"," >> /usr/share/nginx/html/env-config.js
+echo "  VITE_PAYPAL_CLIENT_ID: \"${VITE_PAYPAL_CLIENT_ID}\"," >> /usr/share/nginx/html/env-config.js
+echo "  VITE_GOOGLE_MAPS_API_KEY: \"${VITE_GOOGLE_MAPS_API_KEY}\"," >> /usr/share/nginx/html/env-config.js
+echo "  VITE_GOOGLE_CLOUD_VISION_API_KEY: \"${VITE_GOOGLE_CLOUD_VISION_API_KEY}\"," >> /usr/share/nginx/html/env-config.js
+echo "  VITE_API_VERSION: \"${VITE_API_VERSION}\"," >> /usr/share/nginx/html/env-config.js
+echo "  VITE_MEDIA_URL: \"${VITE_MEDIA_URL}\"," >> /usr/share/nginx/html/env-config.js
+echo "  VITE_STATIC_URL: \"${VITE_STATIC_URL}\"," >> /usr/share/nginx/html/env-config.js
 
 echo "}" >> /usr/share/nginx/html/env-config.js 

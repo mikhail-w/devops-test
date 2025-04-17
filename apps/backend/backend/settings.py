@@ -160,6 +160,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 print("\n=== URL Configuration ===")
 print(f"MEDIA_URL: {MEDIA_URL}")
 print(f"STATIC_URL: {STATIC_URL}")
+print(f"MEDIA_ROOT: {MEDIA_ROOT}")
 
 
 # REST framework settings

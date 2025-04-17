@@ -50,73 +50,65 @@ Before starting, ensure you have the following installed:
 Create a file named `Dockerfile` in your backend directory with the following content:
 
 ```Dockerfile
-# Build stage
-FROM python:3.9-alpine AS builder
-
-# Install build dependencies
-RUN apk add --no-cache postgresql-dev gcc python3-dev musl-dev
-
-# Set work directory
-WORKDIR /app
-
-# Install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Second stage
-FROM python:3.9-alpine
-
-# Install runtime dependencies
-RUN apk add --no-cache libpq netcat-openbsd
-
-# Copy installed packages from builder
-COPY --from=builder /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+FROM python:3.11-slim
 
 # Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 # Set work directory
 WORKDIR /app
 
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    postgresql-client \
+    curl \
+    netcat-traditional \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt /app/
+RUN pip install --upgrade pip && pip install -r requirements.txt
+
 # Copy project
-COPY . .
+COPY . /app/
 
-# Create media directory
-RUN mkdir -p /app/media
-
-# Create health check endpoint
-RUN echo 'from django.http import HttpResponse\nfrom django.urls import path\n\ndef health(request):\n    return HttpResponse("ok")\n\nurlpatterns = [path("health/", health)]' > health_check/urls.py
+# Create media and static directories
+RUN mkdir -p /app/media /app/staticfiles
 
 # Make entrypoint script executable
+COPY entrypoint.sh /app/
 RUN chmod +x /app/entrypoint.sh
 
-# Set the entrypoint
+# Run entrypoint script
 ENTRYPOINT ["/app/entrypoint.sh"]
 
-# Run gunicorn server
-CMD ["gunicorn", "backend.wsgi:application", "--bind", "0.0.0.0:8000"]
+# Default command
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 ```
 
-This Dockerfile uses a multi-stage build approach to create a smaller, more secure production image:
+This Dockerfile is optimized for production use with the following features:
 
-1. **First Stage (Builder)**:
-   - Uses `python:3.9-alpine` as the base image
-   - Installs build dependencies needed for compiling Python packages
-   - Installs Python packages from requirements.txt without caching (`--no-cache-dir`)
+1. **Base Image**:
+   - Uses `python:3.11-slim` for a smaller footprint
+   - Includes only essential system packages
 
-2. **Second Stage (Runtime)**:
-   - Starts fresh with a new `python:3.9-alpine` image
-   - Installs only runtime dependencies
-   - Copies only the necessary Python packages from the builder stage
-   - Sets up the application environment
+2. **Environment Setup**:
+   - Sets Python environment variables for better performance
+   - Creates necessary directories for media and static files
+   - Installs system dependencies with cleanup
 
-Benefits of this approach:
-- Smaller final image size (build dependencies are not included)
-- Better security (fewer packages in the final image)
-- Cleaner separation between build and runtime environments
-- Follows Docker best practices for production deployments
+3. **Dependencies**:
+   - Installs Python packages from requirements.txt
+   - Upgrades pip before installing dependencies
+   - Includes PostgreSQL client for database operations
+
+4. **Application Setup**:
+   - Copies the entire project into the container
+   - Makes the entrypoint script executable
+   - Sets up the default command to run the Django development server
 
 ### Step 2: Create a `.dockerignore` file
 
@@ -249,6 +241,59 @@ docker build -t bonsai-backend .
 docker run -p 8000:8000 bonsai-backend
 ```
 
+### Step 5: Configure Media File Handling
+
+The application now includes an improved media file handling system with the following features:
+
+1. **Environment Variables**:
+   - `VITE_MEDIA_URL`: Base URL for media files (defaults to `${VITE_API_BASE_URL}/media/`)
+   - `VITE_API_BASE_URL`: Base URL for the API
+   - `VITE_S3_PATH`: S3 bucket path for production
+
+2. **Media File Structure**:
+   ```
+   /app/media/
+   └── posts/
+       └── images/
+           └── [uploaded_images]
+   ```
+
+3. **Image Handling Components**:
+   - `S3ImageHandler.jsx`: Handles image display in the frontend
+   - `urlUtils.js`: Provides utilities for cleaning and formatting media URLs
+   - `imageUtils.js`: Contains helper functions for image path manipulation
+
+4. **Media URL Configuration**:
+   - Development: Uses local Django media server
+   - Production: Uses S3/CloudFront
+   - Supports both relative and absolute URLs
+   - Handles path cleaning and normalization
+
+5. **Debugging Tools**:
+   - `debugImagePath()` function for troubleshooting image paths
+   - Environment variable logging for media configuration
+
+To ensure proper media file handling:
+
+1. Create the media directory in your Dockerfile:
+   ```dockerfile
+   RUN mkdir -p /app/media/posts/images
+   ```
+
+2. Mount the media volume in docker-compose.yml:
+   ```yaml
+   volumes:
+     - ./apps/backend:/app
+     - media_volume:/app/media
+   ```
+
+3. Set appropriate environment variables:
+   ```env
+   VITE_MEDIA_URL=http://localhost:8000/media/
+   VITE_API_BASE_URL=http://localhost:8000
+   VITE_S3_PATH=https://your-s3-bucket.s3.amazonaws.com
+   ```
+
 Visit http://localhost:8000 in your browser to verify the backend is running.
 
 ---
@@ -261,50 +306,55 @@ Create a file named `Dockerfile` in your frontend directory:
 
 ```Dockerfile
 # Build stage
-FROM node:16-alpine AS builder
+FROM node:18-alpine AS builder
 
-# Set working directory
+# Set work directory
 WORKDIR /app
 
-# Install dependencies
+# Install necessary dependencies for crypto
+RUN apk add --no-cache python3 make g++
+
+# Copy package files
 COPY package*.json ./
-RUN npm ci
+
+# Install dependencies and Terser
+RUN npm install && npm install -D terser
 
 # Copy project files
 COPY . .
 
-# Build the app
+# Build the project
 RUN npm run build
 
-# Production stage
+# Second stage
 FROM nginx:alpine
 
-# Copy built files to Nginx
+# Copy build files
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy custom Nginx config
+# Copy nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Create health check endpoint
-RUN echo '<!DOCTYPE html><html><head><title>Health Check</title></head><body><h1>OK</h1></body></html>' > /usr/share/nginx/html/health
-
+# Expose port
 EXPOSE 80
 
+# Start nginx
 CMD ["nginx", "-g", "daemon off;"]
 ```
 
-This Dockerfile uses a multi-stage build approach:
+This Dockerfile uses a multi-stage build approach with the following features:
 
-1. **First Stage (Builder)**:
-   - Uses `node:16-alpine` as the base image
-   - Installs dependencies using `npm ci` for consistent installations
+1. **Build Stage**:
+   - Uses `node:18-alpine` as the base image
+   - Installs necessary build dependencies including Python, make, and g++
+   - Installs npm dependencies and Terser for code minification
    - Builds the React application
 
-2. **Second Stage (Production)**:
+2. **Production Stage**:
    - Uses `nginx:alpine` as the base image
    - Copies only the built files from the builder stage
    - Sets up Nginx to serve the static files
-   - Creates a health check endpoint
+   - Configures the container to run Nginx in the foreground
 
 ### Step 2: Create a `.dockerignore` file
 
@@ -421,7 +471,7 @@ Visit http://localhost:3000 to verify that the React app is being served correct
 
 ---
 
-## 🔗 Phase 3: Docker Compose Setup (`feature/docker-compose-dev`)
+## 🔗 Phase 3: Docker Compose Setup
 
 ### Step 1: Create `docker-compose.yml` in the root directory
 
@@ -430,138 +480,125 @@ version: '3.8'
 
 services:
   backend:
-    build: 
+    build:
       context: ./apps/backend
       dockerfile: Dockerfile
-    env_file: .env
-    environment:
-      - DEBUG=${DEBUG}
-      - SECRET_KEY=${SECRET_KEY}
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT}
+    container_name: bonsai-backend
+    restart: unless-stopped
     volumes:
       - ./apps/backend:/app
+      - static_volume:/app/staticfiles
       - media_volume:/app/media
+    env_file:
+      - .env
     ports:
       - "8000:8000"
     depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
-
-  frontend:
-    build:
-      context: ./apps/frontend
-      dockerfile: Dockerfile
-    env_file: .env
-    environment:
-      - REACT_APP_API_URL=${API_URL}
-      - REACT_APP_DEBUG=${DEBUG}
-    ports:
-      - "3000:80"
-    depends_on:
-      - backend
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
-
-  db:
-    image: postgres:13-alpine
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    env_file: .env
-    environment:
-      - POSTGRES_DB=${DB_NAME}
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-volumes:
-  postgres_data:
-  media_volume:
-```
-
-### Step 2: Create Development-Specific Compose File (Optional)
-
-You might want a development-specific version that enables hot-reloading. Create `docker-compose.dev.yml`:
-
-```yaml
-version: '3.8'
-
-services:
-  frontend:
-    build:
-      context: ./apps/frontend
-      dockerfile: Dockerfile.dev
-    volumes:
-      - ./apps/frontend:/app
-      - /app/node_modules
-    command: npm start
-
-  backend:
+      - db
+    networks:
+      - bonsai_network
     command: >
       sh -c "python manage.py wait_for_db &&
              python manage.py migrate &&
              python manage.py runserver 0.0.0.0:8000"
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+    container_name: bonsai-frontend
+    restart: unless-stopped
+    volumes:
+      - ./apps/frontend:/app
+      - /app/node_modules
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - bonsai_network
+    command: sh -c "npm start"
+
+  db:
+    image: postgres:13-alpine
+    container_name: bonsai-db
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    networks:
+      - bonsai_network
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
+
+networks:
+  bonsai_network:
+    driver: bridge
 ```
 
-Create a `Dockerfile.dev` in the frontend directory:
-
-```Dockerfile
-FROM node:16-alpine
-
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm install
-
-COPY . .
-
-EXPOSE 3000
-
-CMD ["npm", "start"]
-```
-
-### Step 3: Run Everything
-
-For production-like setup:
+### Step 2: Create `.env` file in the root directory
 
 ```bash
-docker compose up --build
+# Django Settings
+DEBUG=True
+DJANGO_SECRET_KEY=your-secret-key-here
+ALLOWED_HOSTS=localhost,127.0.0.1
+
+# Database Settings
+DB_NAME=bonsai_db
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_HOST=db
+DB_PORT=5432
+
+# Frontend Settings
+REACT_APP_API_URL=http://localhost:8000/api
+REACT_APP_DEBUG=true
 ```
 
-For development with hot-reloading:
+### Step 3: Build and Start the Services
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+# Build all services
+docker-compose build
+
+# Start all services
+docker-compose up -d
+
+# Check service status
+docker-compose ps
+
+# View logs
+docker-compose logs -f
 ```
 
-### Step 4: Verify It Works
+### Step 4: Initialize the Database
+
+```bash
+# Run migrations
+docker-compose exec backend python manage.py migrate
+
+# Create superuser
+docker-compose exec backend python manage.py createsuperuser
+
+# Collect static files
+docker-compose exec backend python manage.py collectstatic --noinput
+```
+
+### Step 5: Access the Application
 
 - Frontend: http://localhost:3000
-- Backend API: http://localhost:8000/api/
-- Admin: http://localhost:8000/admin/
-- Health Check: http://localhost:8000/health/
+- Backend API: http://localhost:8000/api
+- Django Admin: http://localhost:8000/admin
+- API Documentation: http://localhost:8000/api/docs
 
 ---
 
@@ -662,22 +699,27 @@ services:
       dockerfile: Dockerfile
     env_file: .env
     environment:
-      - DEBUG=${DEBUG}
-      - SECRET_KEY=${SECRET_KEY}
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT}
+      - DB_NAME=bonsai_store
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DJANGO_SUPERUSER_USERNAME=admin
+      - DJANGO_SUPERUSER_EMAIL=admin@mail.com
+      - DJANGO_SUPERUSER_PASSWORD=adminpassword
+      - DJANGO_DEBUG=True
+      - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,backend,*
+      - LOAD_INITIAL_DATA=True
     volumes:
       - ./apps/backend:/app
-      - media_volume:/app/media
+      - ./apps/backend/media:/app/media
     ports:
       - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - app-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
@@ -690,14 +732,12 @@ services:
     build:
       context: ./apps/frontend
       dockerfile: Dockerfile
-    env_file: .env
-    environment:
-      - REACT_APP_API_URL=${API_URL}
-      - REACT_APP_DEBUG=${DEBUG}
     ports:
       - "3000:80"
     depends_on:
       - backend
+    networks:
+      - app-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
@@ -710,22 +750,28 @@ services:
     image: postgres:13-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    env_file: .env
     environment:
-      - POSTGRES_DB=${DB_NAME}
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=bonsai_store
     ports:
       - "5432:5432"
+    networks:
+      - app-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+networks:
+  app-network:
+    driver: bridge
+
 volumes:
   postgres_data:
   media_volume:
+  static_volume:
 ```
 
 #### Step 3: Update the Entrypoint Script

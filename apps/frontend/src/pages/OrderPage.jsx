@@ -87,8 +87,7 @@ function OrderPage() {
   const addPayPalScript = () => {
     const script = document.createElement('script');
     script.type = 'text/javascript';
-    script.src =
-      'https://www.paypal.com/sdk/js?client-id=AY90O6g8EZzF8MHT4eYt6_wk5VHSWDCkjrSesaGcLckTqBUq60_ZkDi26_C7mAwmiP8VqdMNktA1cTLR';
+    script.src = `https://www.paypal.com/sdk/js?client-id=${import.meta.env.VITE_PAYPAL_CLIENT_ID}`;
     script.async = true;
     script.onload = () => {
       setSdkReady(true);

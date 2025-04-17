@@ -12,12 +12,29 @@ const axiosInstance = axios.create({
 // Add a request interceptor
 axiosInstance.interceptors.request.use(
   (config) => {
-    // Get token from localStorage if it exists
-    const userInfo = localStorage.getItem('userInfo');
-    if (userInfo) {
-      const { token } = JSON.parse(userInfo);
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+    // Only add authorization header for protected routes
+    const protectedRoutes = [
+      '/api/users/',
+      '/api/orders/',
+      '/api/products/create/',
+      '/api/products/delete/',
+      '/api/products/update/',
+      '/api/blog/',
+    ];
+
+    // Check if the current request path matches any protected route
+    const isProtectedRoute = protectedRoutes.some(route => 
+      config.url.startsWith(route)
+    );
+
+    // Get token from localStorage if it exists and route is protected
+    if (isProtectedRoute) {
+      const userInfo = localStorage.getItem('userInfo');
+      if (userInfo) {
+        const { token } = JSON.parse(userInfo);
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
       }
     }
     return config;

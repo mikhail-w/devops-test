@@ -97,6 +97,18 @@ docker system prune
 
 # Complete cleanup including volumes
 docker system prune -a --volumes
+
+# Stop all running containers
+docker stop $(docker ps -aq)
+
+# Remove all containers (both stopped and running)
+docker rm $(docker ps -aq)
+
+# Remove all Docker images
+docker rmi $(docker images -q)
+
+# Verify cleanup (check containers and images)
+docker ps -a && echo "---" && docker images
 ```
 
 ---

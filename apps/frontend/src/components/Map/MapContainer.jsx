@@ -141,12 +141,29 @@ const MapContainer = ({
     isLoaded,
   ]);
 
+  // In the processPlace function in MapContainer.jsx
   const processPlace = useCallback(place => {
     if (!place?.geometry?.location) {
       return null;
     }
 
     try {
+      // Initialize with the default image
+      let photoUrl = DefaultImg;
+      
+      // Safely try to get the photo URL with error handling
+      if (place.photos && place.photos.length > 0) {
+        try {
+          photoUrl = place.photos[0].getUrl({
+            maxWidth: 400,
+            maxHeight: 400
+          });
+        } catch (photoError) {
+          console.error('Error getting photo URL:', photoError);
+          // Fall back to default image silently
+        }
+      }
+
       return {
         id: place.place_id,
         name: place.name,
@@ -160,13 +177,16 @@ const MapContainer = ({
         reviewCount: place.user_ratings_total || 0,
         isOpen: place.opening_hours?.isOpen() || false,
         types: place.types || [],
-        photo: place.photos?.[0]?.getUrl({ maxWidth: 200 }) || DefaultImg,
+        photo: photoUrl, // This is now always set to either a valid URL or the default image
+        photoFailed: false // Add flag to track if photo loading failed
       };
     } catch (error) {
       console.error('Error processing place:', error);
       return null;
     }
   }, []);
+
+// Similar update in the searchPlaces function where you process results
 
   // Geolocation setup
   useEffect(() => {
@@ -256,21 +276,36 @@ const MapContainer = ({
         return;
       }
 
-      const processedResults = results.map(place => ({
-        id: place.place_id,
-        name: place.name,
-        address: place.vicinity,
-        position: {
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng(),
-        },
-        vicinity: place.vicinity,
-        rating: place.rating || 0,
-        reviewCount: place.user_ratings_total || 0,
-        isOpen: place.opening_hours?.isOpen() || false,
-        types: place.types || [],
-        photo: place.photos?.[0]?.getUrl({ maxWidth: 200 }) || DefaultImg,
-      }));
+      const processedResults = results.map(place => {
+        let photoUrl = DefaultImg;
+        if (place.photos && place.photos.length > 0) {
+          try {
+            photoUrl = place.photos[0].getUrl({
+              maxWidth: 400,
+              maxHeight: 400
+            });
+          } catch (photoError) {
+            console.error('Error getting photo URL:', photoError);
+            photoUrl = DefaultImg;
+          }
+        }
+
+        return {
+          id: place.place_id,
+          name: place.name,
+          address: place.vicinity,
+          position: {
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng(),
+          },
+          vicinity: place.vicinity,
+          rating: place.rating || 0,
+          reviewCount: place.user_ratings_total || 0,
+          isOpen: place.opening_hours?.isOpen() || false,
+          types: place.types || [],
+          photo: photoUrl,
+        };
+      });
 
       setMarkers(processedResults);
       setLocationList(processedResults);
