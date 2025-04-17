@@ -15,9 +15,7 @@ export const cleanMediaPath = (path, baseUrl = '') => {
   }
 
   // Get environment configuration
-  const isDevelopment = import.meta.env.VITE_ENV === 'development';
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-  const s3Path = import.meta.env.VITE_S3_PATH;
+  const mediaUrl = import.meta.env.VITE_MEDIA_URL || 'http://localhost:8000/media/';
 
   // Remove leading/trailing slashes and clean up the path
   const cleanPath = path
@@ -26,22 +24,6 @@ export const cleanMediaPath = (path, baseUrl = '') => {
     .replace(/^media\/|\/media$/g, '') // Remove standalone media at start/end
     .replace(/\/+/g, '/'); // Replace multiple slashes with single
 
-  // In development, use the Django development server
-  if (isDevelopment && apiBaseUrl) {
-    return `${apiBaseUrl}/media/${cleanPath}`;
-  }
-
-  // In production, use S3/CloudFront if configured
-  if (s3Path) {
-    return `${s3Path}/media/${cleanPath}`;
-  }
-
-  // Fallback to regular API URL
-  const combinedPath = baseUrl
-    ? `${baseUrl.replace(/\/+$/, '')}/${cleanPath}`
-    : cleanPath;
-
-  return combinedPath.includes('/media/')
-    ? combinedPath
-    : `${baseUrl}/media/${cleanPath}`;
+  // Combine the media URL with the cleaned path
+  return `${mediaUrl.replace(/\/+$/, '')}/${cleanPath}`;
 };

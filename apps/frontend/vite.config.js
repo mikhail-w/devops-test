@@ -14,11 +14,25 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     server: {
+      host: true,
+      port: 3000,
       proxy: {
         '/api': {
-          target: env.VITE_API_BASE_URL || 'http://127.0.0.1:8000',
+          target: env.VITE_API_BASE_URL || 'http://localhost:8000',
           changeOrigin: true,
+          secure: false,
+          ws: true,
           rewrite: path => path.replace(/^\/api/, '/api'),
+        },
+        '/media': {
+          target: env.VITE_API_BASE_URL || 'http://localhost:8000',
+          changeOrigin: true,
+          secure: false,
+        },
+        '/static': {
+          target: env.VITE_API_BASE_URL || 'http://localhost:8000',
+          changeOrigin: true,
+          secure: false,
         },
       },
     },

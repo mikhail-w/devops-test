@@ -1,27 +1,25 @@
+/**
+ * Get the proper image URL based on environment and path
+ * @param {string} imagePath - Path to the image
+ * @returns {string} - Full URL to the image
+ */
 export const getImagePath = imagePath => {
   if (!imagePath) {
-    // console.log('No image path provided, using placeholder');
-    return 'default/placeholder.jpg';
+    console.log('No image path provided, using placeholder');
+    return `${import.meta.env.VITE_API_BASE_URL}/media/default/placeholder.jpg`;
   }
 
-  // If it's already a full S3 URL, return it as is
-  if (imagePath.includes('amazonaws.com')) {
-    // console.log('Using existing S3 URL:', imagePath);
+  // If it's already a full URL (http, https, or S3), return it as is
+  if (imagePath.startsWith('http') || imagePath.includes('amazonaws.com')) {
     return imagePath;
   }
-
-  // Clean the path by removing any existing prefixes
-  const cleanMediaPath = (imagePath, baseURL) => {
-    if (!imagePath) return null;
-
-    // Ensure baseURL ends without a slash and imagePath starts without one
-    const cleanBaseURL = baseURL.replace(/\/+$/, '');
-    const cleanPath = imagePath.replace(/^\/+/, '').replace(/\/+/g, '/'); // Remove leading/trailing/multiple slashes
-
-    // Construct full URL
-    return `${cleanBaseURL}/${cleanPath}`;
-  };
-
-  // Use the cleaned path with the API base URL
-  return cleanMediaPath(imagePath, import.meta.env.VITE_API_BASE_URL);
+  
+  // Remove any leading slashes from the image path
+  const cleanPath = imagePath.replace(/^\/+/, '');
+  
+  // Ensure the path includes "media" if not already there
+  const mediaPath = cleanPath.startsWith('media/') ? cleanPath : `media/${cleanPath}`;
+  
+  // Add the base URL
+  return `${import.meta.env.VITE_API_BASE_URL}/${mediaPath}`;
 };

@@ -25,10 +25,10 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "your-default-secret-key")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DJANGO_DEBUG", "False").lower() in ("true", "1")
+DEBUG = True
 
 # ALLOWED_HOSTS from environment or default to localhost
-ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+ALLOWED_HOSTS = ["*"]  # For development only
 
 # OpenAI API Key
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -180,22 +180,47 @@ SIMPLE_JWT = {
 }
 
 # CORS settings
-# CORS_ORIGIN_ALLOW_ALL = True
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_CREDENTIALS = True
 
-
-# Uncomment and configure if you want to restrict allowed origins
+# Add CORS_ALLOWED_ORIGINS if you want to restrict allowed origins
 CORS_ALLOWED_ORIGINS = [
-    "https://mwbonsai.com",
-    "https://www.mwbonsai.com",
-    "https://d2v41dj0jm6bl1.cloudfront.net",
-    "http://127.0.0.1:5173",
-    "http://localhost:5173",
-    "http://mikhail-bonsai.s3-website-us-east-1.amazonaws.com",
-    "http://mwbonsai.s3-website-us-east-1.amazonaws.com",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
 ]
 
-# Add CORS_ALLOW_CREDENTIALS if you're using cookies/sessions
-CORS_ALLOW_CREDENTIALS = True
+# Add CSRF trusted origins
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
+# Add CORS_ALLOW_METHODS
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+# Add CORS_ALLOW_HEADERS
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 # Security settings for production
 if not DEBUG:

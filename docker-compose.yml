@@ -6,14 +6,29 @@ services:
       context: ./apps/backend
       dockerfile: Dockerfile
     env_file: .env
+    environment:
+      - DB_NAME=bonsai_store
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DJANGO_SUPERUSER_USERNAME=admin
+      - DJANGO_SUPERUSER_EMAIL=admin@mail.com
+      - DJANGO_SUPERUSER_PASSWORD=adminpassword
+      - DJANGO_DEBUG=True
+      - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,backend,*
+      - LOAD_INITIAL_DATA=True
     volumes:
       - ./apps/backend:/app
-      - media_volume:/app/media
+      - ./apps/backend/media:/app/media
+      - static_volume:/app/staticfiles
     ports:
       - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - app-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
@@ -30,6 +45,8 @@ services:
       - "3000:80"
     depends_on:
       - backend
+    networks:
+      - app-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
@@ -42,15 +59,25 @@ services:
     image: postgres:13-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    env_file: .env
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=bonsai_store
     ports:
       - "5432:5432"
+    networks:
+      - app-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+networks:
+  app-network:
+    driver: bridge
+
 volumes:
   postgres_data:
-  media_volume: 
+  media_volume:
+  static_volume:

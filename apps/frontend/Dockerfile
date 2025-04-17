@@ -1,14 +1,17 @@
 # Build stage
-FROM node:16-alpine AS builder
+FROM node:18-alpine AS builder
 
 # Set work directory
 WORKDIR /app
 
+# Install necessary dependencies for crypto
+RUN apk add --no-cache python3 make g++
+
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies and Terser
+RUN npm install && npm install -D terser
 
 # Copy project files
 COPY . .
