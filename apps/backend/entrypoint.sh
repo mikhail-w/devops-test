@@ -69,11 +69,11 @@ fi
 # Load initial data if needed
 if [ "${LOAD_INITIAL_DATA}" = "True" ]; then
     echo "Loading initial data..."
-    if [ -f "users.json" ]; then python manage.py loaddata users.json; fi
-    if [ -f "products.json" ]; then python manage.py loaddata products.json; fi
-    if [ -f "reviews.json" ]; then python manage.py loaddata reviews.json; fi
-    if [ -f "posts.json" ]; then python manage.py loaddata posts.json; fi
-    if [ -f "comments.json" ]; then python manage.py loaddata comments.json; fi
+    if [ -f "fixtures/users.json" ]; then python manage.py loaddata fixtures/users.json; fi
+    if [ -f "fixtures/products.json" ]; then python manage.py loaddata fixtures/products.json; fi
+    if [ -f "fixtures/reviews.json" ]; then python manage.py loaddata fixtures/reviews.json; fi
+    if [ -f "fixtures/posts.json" ]; then python manage.py loaddata fixtures/posts.json; fi
+    if [ -f "fixtures/comments.json" ]; then python manage.py loaddata fixtures/comments.json; fi
 fi
 
 # Create health check module and view
