@@ -1,56 +1,117 @@
 # 🌿 Bonsai App - Complete Docker Setup Guide
 
-Welcome to the comprehensive guide for setting up and testing the Bonsai application using Docker! This guide will walk you through Dockerizing both the **backend (Django)** and **frontend (React)** components, connecting them with **Docker Compose**, and optionally pushing your images to **AWS ECR** for deployment.
+Welcome to the comprehensive guide for setting up and running the Bonsai application using Docker! This guide reflects the current state of the project and will walk you through setting up both the **backend (Django)** and **frontend (React/Vite)** components, connecting them with **Docker Compose**, and managing environment variables.
 
 ## 📋 Table of Contents
 
-- [Overview](#-high-level-overview)
 - [Prerequisites](#-prerequisites)
-- [Phase 1: Dockerize the Backend](#-phase-1-dockerize-the-backend)
-- [Phase 2: Dockerize the Frontend](#-phase-2-dockerize-the-frontend)
-- [Phase 3: Docker Compose Setup](#-phase-3-docker-compose-setup)
-- [Database Initialization](#-database-initialization)
-- [Secrets and Environment Variables Management](#-secrets-and-environment-variables-management)
-- [Testing and Troubleshooting](#-testing-and-troubleshooting)
-- [Phase 4: AWS ECR Integration](#-phase-4-aws-ecr-integration)
-- [Phase 5: CI/CD with GitHub Actions](#-phase-5-cicd-with-github-actions)
-- [Production Considerations](#-production-considerations)
-
----
-
-## 🗺️ High-Level Overview
-
-We'll complete this setup in **5 phases**:
-
-1. **Dockerize the Backend** - Create a Django container
-2. **Dockerize the Frontend** - Create a React container
-3. **Connect with Docker Compose** - Orchestrate all services
-4. **AWS ECR Integration** - Push images to cloud registry (optional)
-5. **CI/CD Setup** - Automate builds with GitHub Actions (optional)
-
----
+- [Project Structure](#-project-structure)
+- [Environment Setup](#-environment-setup)
+- [Backend Setup](#-backend-setup)
+- [Frontend Setup](#-frontend-setup)
+- [Docker Compose Configuration](#-docker-compose-configuration)
+- [Application Access](#-application-access)
+- [Common Commands](#-common-commands)
+- [Troubleshooting](#-troubleshooting)
 
 ## 🛠️ Prerequisites
 
-Before starting, ensure you have the following installed:
-
+Ensure you have the following installed:
 - Docker (v20.10+)
 - Docker Compose (v2.0+)
 - Git
 - Node.js (for local development)
 - Python (for local development)
-- AWS CLI (only for ECR integration)
 
----
+## 📁 Project Structure
 
-## 📦 Phase 1: Dockerize the Backend (`feature/docker-backend`)
+```
+bonsai/
+├── .github/
+│   └── workflows/
+│       └── deploy.yml
+├── apps/
+│   ├── backend/
+│   │   ├── Dockerfile
+│   │   ├── .dockerignore
+│   │   ├── entrypoint.sh
+│   │   ├── requirements.txt
+│   │   ├── manage.py
+│   │   ├── media/
+│   │   ├── staticfiles/
+│   │   └── ...
+│   └── frontend/
+│       ├── Dockerfile
+│       ├── .dockerignore
+│       ├── nginx.conf
+│       ├── env.sh
+│       ├── package.json
+│       ├── vite.config.js
+│       └── ...
+├── docker-compose.yml
+├── .env
+├── .env.example
+└── README.md
+```
 
-### Step 1: Create a `Dockerfile` in `/apps/backend`
+## 🔐 Environment Setup
 
-Create a file named `Dockerfile` in your backend directory with the following content:
+Create a `.env` file in the project root with the following structure:
 
-```Dockerfile
-FROM python:3.11-slim
+```bash
+# ===== DATABASE CONFIGURATION =====
+DB_NAME=bonsai_store
+DB_USER=postgres
+DB_PASSWORD=your_db_password_here
+DB_HOST=db
+DB_PORT=5432
+
+# ===== BACKEND CONFIGURATION =====
+# Django settings
+DEBUG=True
+SECRET_KEY=your-secret-key-here
+ALLOWED_HOSTS=localhost,127.0.0.1,backend
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://frontend
+LOAD_INITIAL_DATA=True
+
+# Admin credentials
+DJANGO_SUPERUSER_USERNAME=admin
+DJANGO_SUPERUSER_EMAIL=admin@example.com
+DJANGO_SUPERUSER_PASSWORD=your_admin_password_here
+
+# ===== API CONFIGURATION =====
+API_BASE_URL=http://localhost:8000
+VITE_API_BASE_URL=http://localhost:8000
+VITE_API_URL=${VITE_API_BASE_URL}/api
+VITE_MEDIA_URL=${VITE_API_BASE_URL}/media
+VITE_STATIC_URL=${VITE_API_BASE_URL}/static
+
+# ===== FRONTEND CONFIGURATION =====
+# Third-party API keys
+VITE_WEATHER_API_KEY=your_weather_api_key_here
+VITE_PAYPAL_CLIENT_ID=your_paypal_client_id_here
+VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+VITE_GOOGLE_CLOUD_VISION_API_KEY=your_vision_api_key_here
+
+# Feature flags
+VITE_ENABLE_CHAT=true
+VITE_ENABLE_REVIEWS=true
+VITE_ENABLE_BLOG=true
+
+# Authentication
+VITE_AUTH_TOKEN_KEY=bonsai_auth_token
+VITE_REFRESH_TOKEN_KEY=bonsai_refresh_token
+```
+
+## 📦 Backend Setup
+
+### Backend Dockerfile
+
+Create `apps/backend/Dockerfile`:
+
+```dockerfile
+# Build stage
+FROM python:3.11-alpine AS builder
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -60,13 +121,15 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apk add --no-cache \
     gcc \
+    musl-dev \
+    postgresql-dev \
     postgresql-client \
     curl \
-    netcat-traditional \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    libffi-dev \
+    bash \
+    netcat-openbsd
 
 # Install Python dependencies
 COPY requirements.txt /app/
@@ -74,6 +137,31 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 
 # Copy project
 COPY . /app/
+
+# Create media and static directories
+RUN mkdir -p /app/media /app/staticfiles
+
+# Runtime stage
+FROM python:3.11-alpine
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Set work directory
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    postgresql-client \
+    netcat-openbsd \
+    bash \
+    curl
+
+# Copy only necessary files from builder
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+COPY --from=builder /app /app
 
 # Create media and static directories
 RUN mkdir -p /app/media /app/staticfiles
@@ -89,109 +177,36 @@ ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 ```
 
-This Dockerfile is optimized for production use with the following features:
+### Backend Entrypoint Script
 
-1. **Base Image**:
-   - Uses `python:3.11-slim` for a smaller footprint
-   - Includes only essential system packages
-
-2. **Environment Setup**:
-   - Sets Python environment variables for better performance
-   - Creates necessary directories for media and static files
-   - Installs system dependencies with cleanup
-
-3. **Dependencies**:
-   - Installs Python packages from requirements.txt
-   - Upgrades pip before installing dependencies
-   - Includes PostgreSQL client for database operations
-
-4. **Application Setup**:
-   - Copies the entire project into the container
-   - Makes the entrypoint script executable
-   - Sets up the default command to run the Django development server
-
-### Step 2: Create a `.dockerignore` file
-
-In the same directory, create a `.dockerignore` to exclude unnecessary files:
-
-```
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual Environment
-.env
-.venv
-venv/
-ENV/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Git
-.git
-.gitignore
-
-# Docker
-Dockerfile
-.dockerignore
-
-# Local development
-*.log
-local_settings.py
-db.sqlite3
-media/
-static/
-
-# Test coverage
-.coverage
-htmlcov/
-.pytest_cache/
-
-# Documentation
-docs/
-*.md
-LICENSE
-
-# Temporary files
-*.tmp
-*.bak
-*.swp
-*~
-```
-
-### Step 3: Create an Entrypoint Script
-
-Create a file named `entrypoint.sh` in your backend directory:
+Create `apps/backend/entrypoint.sh`:
 
 ```bash
-#!/bin/sh
+#!/bin/bash
 
-# Wait for the database to be ready
+# Function to check if postgres is up and ready
+function postgres_ready(){
+python << END
+import sys
+import psycopg2
+try:
+    conn = psycopg2.connect(
+        dbname="${DB_NAME}",
+        user="${DB_USER}",
+        password="${DB_PASSWORD}",
+        host="${DB_HOST}",
+        port="${DB_PORT}"
+    )
+except psycopg2.OperationalError:
+    sys.exit(-1)
+sys.exit(0)
+END
+}
+
 echo "Waiting for PostgreSQL to be ready..."
-while ! nc -z db 5432; do
-  sleep 0.1
+# Wait for postgres to be ready
+until postgres_ready; do
+  sleep 2
 done
 echo "PostgreSQL is ready!"
 
@@ -199,141 +214,143 @@ echo "PostgreSQL is ready!"
 echo "Applying database migrations..."
 python manage.py migrate
 
-# Load fixtures in the correct order
-echo "Loading fixtures..."
-python manage.py loaddata users.json
-python manage.py loaddata products.json
-python manage.py loaddata posts.json
-python manage.py loaddata reviews.json
-python manage.py loaddata comments.json
+# Collect static files
+echo "Collecting static files..."
+python manage.py collectstatic --noinput
 
-# Create superuser if it doesn't exist
-echo "Creating superuser if it doesn't exist..."
-python manage.py shell -c "
-from django.contrib.auth import get_user_model;
-User = get_user_model();
-if not User.objects.filter(username='${ADMIN_USERNAME:-admin}').exists():
-    User.objects.create_superuser(
-        '${ADMIN_USERNAME:-admin}', 
-        '${ADMIN_EMAIL:-admin@mail.com}', 
-        '${ADMIN_PASSWORD:-admin}'
-    )
-"
+# Create superuser if environment variables are set
+if [ -n "${DJANGO_SUPERUSER_USERNAME}" ] && [ -n "${DJANGO_SUPERUSER_EMAIL}" ] && [ -n "${DJANGO_SUPERUSER_PASSWORD}" ]; then
+    echo "Creating superuser..."
+    python manage.py shell << END
+from django.contrib.auth import get_user_model
+from django.db import IntegrityError
+User = get_user_model()
 
-# Start the application
-echo "Starting the application..."
+try:
+    if not User.objects.filter(username='${DJANGO_SUPERUSER_USERNAME}').exists():
+        user = User.objects.create_superuser(
+            username='${DJANGO_SUPERUSER_USERNAME}',
+            email='${DJANGO_SUPERUSER_EMAIL}',
+            password='${DJANGO_SUPERUSER_PASSWORD}'
+        )
+        print('Superuser created successfully')
+    else:
+        # Update existing superuser password
+        user = User.objects.get(username='${DJANGO_SUPERUSER_USERNAME}')
+        user.set_password('${DJANGO_SUPERUSER_PASSWORD}')
+        user.email = '${DJANGO_SUPERUSER_EMAIL}'
+        user.is_superuser = True
+        user.is_staff = True
+        user.save()
+        print('Superuser updated successfully')
+except IntegrityError as e:
+    print(f'Error: Could not create superuser - {str(e)}')
+except Exception as e:
+    print(f'Error: Unexpected error creating superuser - {str(e)}')
+END
+fi
+
+# Load initial data if needed
+if [ "${LOAD_INITIAL_DATA}" = "True" ]; then
+    echo "Loading initial data..."
+    if [ -f "users.json" ]; then python manage.py loaddata users.json; fi
+    if [ -f "products.json" ]; then python manage.py loaddata products.json; fi
+    if [ -f "reviews.json" ]; then python manage.py loaddata reviews.json; fi
+    if [ -f "posts.json" ]; then python manage.py loaddata posts.json; fi
+    if [ -f "comments.json" ]; then python manage.py loaddata comments.json; fi
+fi
+
+# Create health check module and view
+mkdir -p health_check
+echo "from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def health_view(request):
+    return HttpResponse('OK', status=200)" > health_check/__init__.py
+
+# Add health check URL pattern to urls.py if it doesn't exist
+if ! grep -q "health_check" "backend/urls.py"; then
+    # Create a backup of the original file
+    cp backend/urls.py backend/urls.py.bak
+    
+    # Add import for health_check
+    sed -i "s/from django.conf.urls.static import static/from django.conf.urls.static import static\nfrom health_check import health_view/" backend/urls.py
+    
+    # Add health check URL pattern
+    sed -i "s/\]$/    path('health\/', health_view, name='health'),\n]/" backend/urls.py
+    
+    echo "Added health check endpoint to urls.py"
+fi
+
+# Execute the command passed to the entrypoint
 exec "$@"
 ```
 
-Make the script executable:
+## 🌿 Frontend Setup
 
-```bash
-chmod +x apps/backend/entrypoint.sh
-```
+### Frontend Dockerfile
 
-### Step 4: Test the Backend Container
+Create `apps/frontend/Dockerfile`:
 
-Build and run the backend container to ensure it works correctly:
-
-```bash
-cd apps/backend
-docker build -t bonsai-backend .
-docker run -p 8000:8000 bonsai-backend
-```
-
-### Step 5: Configure Media File Handling
-
-The application now includes an improved media file handling system with the following features:
-
-1. **Environment Variables**:
-   - `VITE_MEDIA_URL`: Base URL for media files (defaults to `${VITE_API_BASE_URL}/media/`)
-   - `VITE_API_BASE_URL`: Base URL for the API
-   - `VITE_S3_PATH`: S3 bucket path for production
-
-2. **Media File Structure**:
-   ```
-   /app/media/
-   └── posts/
-       └── images/
-           └── [uploaded_images]
-   ```
-
-3. **Image Handling Components**:
-   - `S3ImageHandler.jsx`: Handles image display in the frontend
-   - `urlUtils.js`: Provides utilities for cleaning and formatting media URLs
-   - `imageUtils.js`: Contains helper functions for image path manipulation
-
-4. **Media URL Configuration**:
-   - Development: Uses local Django media server
-   - Production: Uses S3/CloudFront
-   - Supports both relative and absolute URLs
-   - Handles path cleaning and normalization
-
-5. **Debugging Tools**:
-   - `debugImagePath()` function for troubleshooting image paths
-   - Environment variable logging for media configuration
-
-To ensure proper media file handling:
-
-1. Create the media directory in your Dockerfile:
-   ```dockerfile
-   RUN mkdir -p /app/media/posts/images
-   ```
-
-2. Mount the media volume in docker-compose.yml:
-   ```yaml
-   volumes:
-     - ./apps/backend:/app
-     - media_volume:/app/media
-   ```
-
-3. Set appropriate environment variables:
-   ```env
-   VITE_MEDIA_URL=http://localhost:8000/media/
-   VITE_API_BASE_URL=http://localhost:8000
-   VITE_S3_PATH=https://your-s3-bucket.s3.amazonaws.com
-   ```
-
-Visit http://localhost:8000 in your browser to verify the backend is running.
-
----
-
-## 🌿 Phase 2: Dockerize the Frontend (`feature/docker-frontend`)
-
-### Step 1: Create a `Dockerfile` in `/apps/frontend`
-
-Create a file named `Dockerfile` in your frontend directory:
-
-```Dockerfile
+```dockerfile
 # Build stage
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 # Set work directory
 WORKDIR /app
 
-# Install necessary dependencies for crypto
+# Install necessary dependencies for crypto and build
 RUN apk add --no-cache python3 make g++
 
-# Copy package files
+# Copy package files first for better caching
 COPY package*.json ./
 
-# Install dependencies and Terser
-RUN npm install && npm install -D terser
+# Install dependencies with specific versions for production
+RUN npm ci --only=production && \
+    npm install -D terser@latest
 
 # Copy project files
 COPY . .
 
-# Build the project
-RUN npm run build
+# Build the project with production optimization
+RUN npm run build && \
+    # Clean up unnecessary files
+    rm -rf node_modules && \
+    rm -rf src && \
+    rm -rf public && \
+    rm -rf .next
 
-# Second stage
+# Second stage - Production
 FROM nginx:alpine
+
+# Add security headers and remove unnecessary files
+RUN apk add --no-cache tzdata && \
+    rm -rf /etc/nginx/conf.d/* && \
+    rm -rf /usr/share/nginx/html/*
 
 # Copy build files
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy nginx configuration
+# Copy nginx configuration with security headers
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy and make the env script executable
+COPY env.sh /docker-entrypoint.d/40-env.sh
+RUN chmod +x /docker-entrypoint.d/40-env.sh
+
+# Handle www-data user/group properly (Alpine specific)
+RUN grep -q "^www-data:" /etc/group || addgroup -g 82 www-data && \
+    grep -q "^www-data:" /etc/passwd || adduser -D -H -u 1000 -s /bin/sh -G www-data www-data && \
+    chown -R www-data:www-data /var/cache/nginx && \
+    chown -R www-data:www-data /var/log/nginx && \
+    chown -R www-data:www-data /etc/nginx/conf.d && \
+    chown -R www-data:www-data /usr/share/nginx/html && \
+    touch /var/run/nginx.pid && \
+    chown -R www-data:www-data /var/run/nginx.pid
+
+# Switch to non-root user
+USER www-data
 
 # Expose port
 EXPOSE 80
@@ -342,405 +359,194 @@ EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 ```
 
-This Dockerfile uses a multi-stage build approach with the following features:
+### Frontend Nginx Configuration
 
-1. **Build Stage**:
-   - Uses `node:18-alpine` as the base image
-   - Installs necessary build dependencies including Python, make, and g++
-   - Installs npm dependencies and Terser for code minification
-   - Builds the React application
-
-2. **Production Stage**:
-   - Uses `nginx:alpine` as the base image
-   - Copies only the built files from the builder stage
-   - Sets up Nginx to serve the static files
-   - Configures the container to run Nginx in the foreground
-
-### Step 2: Create a `.dockerignore` file
-
-In the frontend directory, create a `.dockerignore`:
-
-```
-# Dependencies
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-package-lock.json
-yarn.lock
-
-# Testing
-coverage/
-.nyc_output/
-
-# Production build
-build/
-dist/
-
-# Environment files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Git
-.git
-.gitignore
-
-# Docker
-Dockerfile
-.dockerignore
-
-# Logs
-logs/
-*.log
-
-# Cache
-.cache/
-.npm/
-.eslintcache
-
-# Documentation
-docs/
-*.md
-LICENSE
-
-# Temporary files
-*.tmp
-*.bak
-*.swp
-*~
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-```
-
-### Step 3: Create Nginx Configuration
-
-Create a file named `nginx.conf` in your frontend directory:
+Create `apps/frontend/nginx.conf`:
 
 ```nginx
 server {
     listen 80;
-    server_name localhost;
+    root /usr/share/nginx/html;
+    index index.html;
 
+    # Handle React routing and root requests
     location / {
         root /usr/share/nginx/html;
-        index index.html;
+        index index.html index.htm;
         try_files $uri $uri/ /index.html;
-    }
-
-    location /health {
-        access_log off;
-        return 200 'ok';
+        
+        # Additional CORS headers
+        add_header Access-Control-Allow-Origin *;
+        add_header Access-Control-Allow-Methods 'GET, POST, OPTIONS';
+        add_header Access-Control-Allow-Headers 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range';
     }
 
     # Proxy API requests to the backend
     location /api/ {
+        # Use the service name from docker-compose
         proxy_pass http://backend:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 90s;
+        proxy_connect_timeout 90s;
+        
+        # Add CORS headers
+        add_header Access-Control-Allow-Origin '*' always;
+        add_header Access-Control-Allow-Methods 'GET, POST, OPTIONS, PUT, DELETE, PATCH' always;
+        add_header Access-Control-Allow-Headers 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+        add_header Access-Control-Expose-Headers 'Content-Length,Content-Range' always;
+        
+        # Handle preflight requests
+        if ($request_method = 'OPTIONS') {
+            add_header Access-Control-Allow-Origin '*';
+            add_header Access-Control-Allow-Methods 'GET, POST, OPTIONS, PUT, DELETE, PATCH';
+            add_header Access-Control-Allow-Headers 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization';
+            add_header Access-Control-Max-Age 1728000;
+            add_header Content-Type 'text/plain charset=UTF-8';
+            add_header Content-Length 0;
+            return 204;
+        }
+    }
+
+    # Proxy media files to backend
+    location /media/ {
+        proxy_pass http://backend:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 90s;
+    }
+
+    # Cache static assets
+    location /static/ {
+        proxy_pass http://backend:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        expires 1y;
+        add_header Cache-Control "public, no-transform";
+    }
+
+    # Health check endpoint
+    location /health {
+        access_log off;
+        return 200 'healthy\n';
+    }
+
+    # Handle static image files
+    location ~* \.(jpg|jpeg|png|gif|ico)$ {
+        root /usr/share/nginx/html;
+        try_files $uri $uri/ =404;
+        add_header Access-Control-Allow-Origin *;
+        add_header Cache-Control "public, max-age=86400";
+        expires 1d;
     }
 }
 ```
 
-### Step 4: Test the Frontend Container
+### Frontend Environment Script
 
-Build and run the frontend container:
+Create `apps/frontend/env.sh`:
 
 ```bash
-cd apps/frontend
-docker build -t bonsai-frontend .
-docker run -p 3000:80 bonsai-frontend
+#!/bin/sh
+
+# Recreate config file
+rm -rf /usr/share/nginx/html/env-config.js
+touch /usr/share/nginx/html/env-config.js
+
+# Add assignment 
+echo "window._env_ = {" >> /usr/share/nginx/html/env-config.js
+
+# Add environment variables
+echo "  VITE_API_BASE_URL: \"${VITE_API_BASE_URL}\"," >> /usr/share/nginx/html/env-config.js
+echo "  VITE_API_URL: \"${VITE_API_URL}\"," >> /usr/share/nginx/html/env-config.js
+echo "  VITE_MEDIA_URL: \"${VITE_MEDIA_URL}\"," >> /usr/share/nginx/html/env-config.js
+echo "  VITE_WEATHER_API_KEY: \"${VITE_WEATHER_API_KEY}\"," >> /usr/share/nginx/html/env-config.js
+echo "  VITE_PAYPAL_CLIENT_ID: \"${VITE_PAYPAL_CLIENT_ID}\"," >> /usr/share/nginx/html/env-config.js
+echo "  VITE_GOOGLE_MAPS_API_KEY: \"${VITE_GOOGLE_MAPS_API_KEY}\"," >> /usr/share/nginx/html/env-config.js
+echo "  VITE_GOOGLE_CLOUD_VISION_API_KEY: \"${VITE_GOOGLE_CLOUD_VISION_API_KEY}\"," >> /usr/share/nginx/html/env-config.js
+
+# Close the object
+echo "}" >> /usr/share/nginx/html/env-config.js
 ```
 
-Visit http://localhost:3000 to verify that the React app is being served correctly.
+## 🔗 Docker Compose Configuration
 
----
-
-## 🔗 Phase 3: Docker Compose Setup
-
-### Step 1: Create `docker-compose.yml` in the root directory
+Create `docker-compose.yml` in the project root:
 
 ```yaml
-version: '3.8'
-
 services:
   backend:
     build:
       context: ./apps/backend
       dockerfile: Dockerfile
-    container_name: bonsai-backend
-    restart: unless-stopped
-    volumes:
-      - ./apps/backend:/app
-      - static_volume:/app/staticfiles
-      - media_volume:/app/media
-    env_file:
-      - .env
-    ports:
-      - "8000:8000"
-    depends_on:
-      - db
-    networks:
-      - bonsai_network
-    command: >
-      sh -c "python manage.py wait_for_db &&
-             python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
-
-  frontend:
-    build:
-      context: ./apps/frontend
-      dockerfile: Dockerfile
-    container_name: bonsai-frontend
-    restart: unless-stopped
-    volumes:
-      - ./apps/frontend:/app
-      - /app/node_modules
-    env_file:
-      - .env
-    ports:
-      - "3000:3000"
-    depends_on:
-      - backend
-    networks:
-      - bonsai_network
-    command: sh -c "npm start"
-
-  db:
-    image: postgres:13-alpine
-    container_name: bonsai-db
-    restart: unless-stopped
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
-    env_file:
-      - .env
-    ports:
-      - "5432:5432"
-    networks:
-      - bonsai_network
-
-volumes:
-  postgres_data:
-  static_volume:
-  media_volume:
-
-networks:
-  bonsai_network:
-    driver: bridge
-```
-
-### Step 2: Create `.env` file in the root directory
-
-```bash
-# Django Settings
-DEBUG=True
-DJANGO_SECRET_KEY=your-secret-key-here
-ALLOWED_HOSTS=localhost,127.0.0.1
-
-# Database Settings
-DB_NAME=bonsai_store
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_HOST=db
-DB_PORT=5432
-
-# Frontend Settings
-REACT_APP_API_URL=http://localhost:8000/api
-REACT_APP_DEBUG=true
-```
-
-### Step 3: Build and Start the Services
-
-```bash
-# Build all services
-docker-compose build
-
-# Start all services
-docker-compose up -d
-
-# Check service status
-docker-compose ps
-
-# View logs
-docker-compose logs -f
-```
-
-### Step 4: Initialize the Database
-
-```bash
-# Run migrations
-docker-compose exec backend python manage.py migrate
-
-# Create superuser
-docker-compose exec backend python manage.py createsuperuser
-
-# Collect static files
-docker-compose exec backend python manage.py collectstatic --noinput
-```
-
-### Step 5: Access the Application
-
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000/api
-- Django Admin: http://localhost:8000/admin
-- API Documentation: http://localhost:8000/api/docs
-
----
-
-## 🗄️ Database Initialization
-
-The database initialization is now handled automatically by the entrypoint script in the backend container. This script:
-
-1. Waits for the PostgreSQL database to be ready
-2. Applies database migrations
-3. Loads fixtures in the correct order:
-   - users.json
-   - products.json
-   - posts.json
-   - reviews.json
-   - comments.json
-4. Creates a Django superuser if it doesn't exist
-
-This automated approach ensures that your database is properly initialized every time the containers start, making the process more reliable and repeatable.
-
-### Verifying Database Setup
-
-To verify that your database has been properly initialized:
-
-```bash
-# Connect to the database container
-docker compose exec db psql -U postgres -d bonsai
-
-# List all tables
-\dt
-
-# Count records in key tables
-SELECT COUNT(*) FROM auth_user;
-SELECT COUNT(*) FROM products_product;
-SELECT COUNT(*) FROM blog_post;
-SELECT COUNT(*) FROM products_review;
-SELECT COUNT(*) FROM blog_comment;
-
-# Exit PostgreSQL
-\q
-```
-
----
-
-## 🔐 Secrets and Environment Variables Management
-
-Properly managing secrets and environment variables is crucial for security and configuration flexibility. Here's how to handle them in your Docker setup:
-
-### Local Development
-
-#### Step 1: Create Environment Files
-
-1. **Create a `.env.example` file** in your project root with placeholder values:
-
-```bash
-# Database Configuration
-DB_NAME=bonsai_store
-DB_USER=postgres
-DB_PASSWORD=your_password_here
-DB_HOST=db
-DB_PORT=5432
-
-# Django Configuration
-DEBUG=True
-SECRET_KEY=your_secret_key_here
-ALLOWED_HOSTS=localhost,127.0.0.1
-
-# AWS Configuration (for production)
-AWS_ACCESS_KEY_ID=your_aws_access_key
-AWS_SECRET_ACCESS_KEY=your_aws_secret_key
-AWS_STORAGE_BUCKET_NAME=your_bucket_name
-AWS_S3_REGION_NAME=your_region
-
-# Email Configuration
-EMAIL_HOST=smtp.example.com
-EMAIL_PORT=587
-EMAIL_HOST_USER=your_email@example.com
-EMAIL_HOST_PASSWORD=your_email_password
-```
-
-2. **Create your actual `.env` file** (this should be in `.gitignore`):
-
-```bash
-# Copy the example file and replace with real values
-cp .env.example .env
-```
-
-#### Step 2: Update Docker Compose Configuration
-
-Modify your `docker-compose.yml` to use environment variables:
-
-```yaml
-version: '3.8'
-
-services:
-  backend:
-    build: 
-      context: ./apps/backend
-      dockerfile: Dockerfile
-    env_file: .env
+    env_file: 
+      - ./.env
     environment:
-      - DB_NAME=bonsai_store
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DJANGO_SUPERUSER_USERNAME=admin
-      - DJANGO_SUPERUSER_EMAIL=admin@mail.com
-      - DJANGO_SUPERUSER_PASSWORD=adminpassword
-      - DJANGO_DEBUG=True
-      - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,backend,*
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DJANGO_SUPERUSER_USERNAME=${ADMIN_USERNAME}
+      - DJANGO_SUPERUSER_EMAIL=${ADMIN_EMAIL}
+      - DJANGO_SUPERUSER_PASSWORD=${ADMIN_PASSWORD}
+      - DJANGO_DEBUG=${DEBUG}
+      - DJANGO_ALLOWED_HOSTS=${ALLOWED_HOSTS}
       - LOAD_INITIAL_DATA=True
+      - API_BASE_URL=${API_BASE_URL}
     volumes:
       - ./apps/backend:/app
       - ./apps/backend/media:/app/media
+      - static_volume:/app/staticfiles
     ports:
-      - "8000:8000"
+      - '8000:8000'
     depends_on:
       db:
         condition: service_healthy
     networks:
       - app-network
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+      - 1.1.1.1
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health/']
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 20s
+      start_period: 40s
 
   frontend:
     build:
       context: ./apps/frontend
       dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL}
+      - VITE_API_URL=${VITE_API_URL}
+      - VITE_MEDIA_URL=${VITE_MEDIA_URL}
+      - VITE_WEATHER_API_KEY=${VITE_WEATHER_API_KEY}
+      - VITE_PAYPAL_CLIENT_ID=${VITE_PAYPAL_CLIENT_ID}
+      - VITE_GOOGLE_MAPS_API_KEY=${VITE_GOOGLE_MAPS_API_KEY}
+      - VITE_GOOGLE_CLOUD_VISION_API_KEY=${VITE_GOOGLE_CLOUD_VISION_API_KEY}
     ports:
-      - "3000:80"
+      - '3000:80'
     depends_on:
       - backend
     networks:
       - app-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -748,18 +554,19 @@ services:
 
   db:
     image: postgres:13-alpine
+    env_file: .env
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=bonsai_store
     ports:
-      - "5432:5432"
+      - '5432:5432'
     networks:
       - app-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER}']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -774,440 +581,158 @@ volumes:
   static_volume:
 ```
 
-#### Step 3: Update the Entrypoint Script
+## 🌐 Application Access
 
-Modify your `entrypoint.sh` to use environment variables for the superuser creation:
+After starting the containers, you can access the application through the following endpoints:
 
-```bash
-#!/bin/sh
+### Frontend Application
+- Main Application: http://localhost:3000
+- Health Check: http://localhost:3000/health
 
-# Wait for the database to be ready
-echo "Waiting for PostgreSQL to be ready..."
-while ! nc -z db 5432; do
-  sleep 0.1
-done
-echo "PostgreSQL is ready!"
+### Backend Services
+- Admin Console: http://localhost:8000/admin
+  - Default admin credentials (if using example .env):
+    - Username: admin
+    - Email: admin@example.com
+    - Password: your_admin_password_here
+- API Root: http://localhost:8000/api
+- API Documentation: http://localhost:8000/api/docs
+- Health Check: http://localhost:8000/health
 
-# Apply database migrations
-echo "Applying database migrations..."
-python manage.py migrate
+### Development Tools
+- Database (PostgreSQL):
+  - Host: localhost
+  - Port: 5432
+  - Database: bonsai_store
+  - Username: postgres
+  - Password: (as specified in .env)
 
-# Load fixtures in the correct order
-echo "Loading fixtures..."
-python manage.py loaddata users.json
-python manage.py loaddata products.json
-python manage.py loaddata posts.json
-python manage.py loaddata reviews.json
-python manage.py loaddata comments.json
+Note: Make sure to replace any default credentials with secure values in production.
 
-# Create superuser if it doesn't exist
-echo "Creating superuser if it doesn't exist..."
-python manage.py shell -c "
-from django.contrib.auth import get_user_model;
-User = get_user_model();
-if not User.objects.filter(username='${ADMIN_USERNAME:-admin}').exists():
-    User.objects.create_superuser(
-        '${ADMIN_USERNAME:-admin}', 
-        '${ADMIN_EMAIL:-admin@mail.com}', 
-        '${ADMIN_PASSWORD:-admin}'
-    )
-"
+## 🛠️ Common Commands
 
-# Start the application
-echo "Starting the application..."
-exec "$@"
-```
-
-### Production Deployment
-
-For production environments, you should use more secure methods to handle secrets:
-
-#### Option 1: Docker Secrets (for Swarm Mode)
-
-If using Docker Swarm, you can use Docker Secrets:
+Here are the most commonly used Docker commands for this project:
 
 ```bash
-# Create secrets
-echo "your_secret_password" | docker secret create db_password -
-echo "your_secret_key" | docker secret create django_secret_key -
+# Build and start all services
+docker-compose up --build
 
-# Use in docker-compose.prod.yml
-version: '3.8'
+# Start all services in detached mode
+docker-compose up -d
 
-services:
-  backend:
-    secrets:
-      - db_password
-      - django_secret_key
-    environment:
-      - DB_PASSWORD_FILE=/run/secrets/db_password
-      - SECRET_KEY_FILE=/run/secrets/django_secret_key
+# Stop all services
+docker-compose down
 
-secrets:
-  db_password:
-    external: true
-  django_secret_key:
-    external: true
+# Stop all services and remove volumes
+docker-compose down -v
+
+# Rebuild and restart all services
+docker-compose down && docker-compose up --build
+
+# View logs
+docker-compose logs -f
+
+# View logs for a specific service
+docker-compose logs -f backend
+docker-compose logs -f frontend
+
+# Restart a specific service
+docker-compose restart backend
+docker-compose restart frontend
+
+# Execute commands in running containers
+docker-compose exec backend python manage.py migrate
+docker-compose exec backend python manage.py createsuperuser
+docker-compose exec db psql -U postgres -d bonsai_store
+
+# Check container status
+docker-compose ps
+
+# View container resource usage
+docker stats
 ```
 
-#### Option 2: AWS Secrets Manager or Parameter Store
+## 🔍 Troubleshooting
 
-For AWS deployments, use AWS Secrets Manager:
+### Common Issues and Solutions
 
-1. Store your secrets in AWS Secrets Manager
-2. Use IAM roles to allow your ECS/EKS tasks to access these secrets
-3. Update your application to fetch secrets from AWS Secrets Manager
+1. **Database Connection Issues**
+   ```bash
+   # Check if database is running
+   docker-compose ps
+   
+   # Check database logs
+   docker-compose logs db
+   
+   # Try restarting the database
+   docker-compose restart db
+   ```
 
-Example code for fetching secrets in Django:
+2. **Frontend Not Loading**
+   ```bash
+   # Check frontend logs
+   docker-compose logs frontend
+   
+   # Rebuild frontend container
+   docker-compose up -d --build frontend
+   ```
 
-```python
-import boto3
-import json
+3. **Backend API Issues**
+   ```bash
+   # Check backend logs
+   docker-compose logs backend
+   
+   # Check if migrations are applied
+   docker-compose exec backend python manage.py showmigrations
+   
+   # Apply migrations manually
+   docker-compose exec backend python manage.py migrate
+   ```
 
-def get_secret(secret_name):
-    session = boto3.session.Session()
-    client = session.client(
-        service_name='secretsmanager',
-        region_name='us-east-1'
-    )
-    
-    try:
-        get_secret_value_response = client.get_secret_value(
-            SecretId=secret_name
-        )
-    except Exception as e:
-        raise e
-    else:
-        if 'SecretString' in get_secret_value_response:
-            secret = json.loads(get_secret_value_response['SecretString'])
-            return secret
-```
+4. **Environment Variables Not Loading**
+   ```bash
+   # Check if .env file is present
+   ls -la .env
+   
+   # Verify environment variables in container
+   docker-compose exec frontend env
+   docker-compose exec backend env
+   ```
 
-#### Option 3: Environment Variables in CI/CD
+5. **Permission Issues**
+   ```bash
+   # Fix media directory permissions
+   sudo chown -R $USER:$USER apps/backend/media
+   
+   # Fix static files permissions
+   sudo chown -R $USER:$USER apps/backend/staticfiles
+   ```
 
-When using GitHub Actions or other CI/CD tools:
+### Health Checks
 
-1. Store secrets in the CI/CD platform's secret management
-2. Pass them as environment variables during deployment
+The application includes health check endpoints for all services:
 
-Example GitHub Actions workflow:
+- Backend: http://localhost:8000/health/
+- Frontend: http://localhost:3000/health
+- Database: Automatically checked via Docker health checks
 
-```yaml
-name: Deploy to Production
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to ECS
-        env:
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-        run: |
-          # Your deployment commands here
-```
-
-### Best Practices for Secrets Management
-
-1. **Never commit secrets to version control**
-   - Always use `.gitignore` to exclude `.env` files
-   - Use placeholder values in example files
-
-2. **Use different secrets for different environments**
-   - Development
-   - Staging
-   - Production
-
-3. **Rotate secrets regularly**
-   - Set up a schedule for rotating passwords and keys
-   - Use tools like AWS Secrets Manager's rotation features
-
-4. **Limit access to secrets**
-   - Use principle of least privilege
-   - Implement role-based access control
-
-5. **Monitor secret usage**
-   - Set up alerts for unusual access patterns
-   - Log all secret access attempts
-
-6. **Use secure methods to transmit secrets**
-   - Always use HTTPS/TLS
-   - Avoid passing secrets in URLs or logs
-
-7. **Consider using a secrets management service**
-   - AWS Secrets Manager
-   - HashiCorp Vault
-   - Azure Key Vault
-
-## 🧪 Testing and Troubleshooting
-
-### Common Commands
-
+You can monitor the health status using:
 ```bash
-# View all running containers
-docker compose ps
-
-# View logs from all services
-docker compose logs
-
-# View logs from a specific service
-docker compose logs backend
-
-# Stream logs in real-time
-docker compose logs -f
-
-# Restart a single service
-docker compose restart backend
-
-# Run a command in a running container
-docker compose exec backend python manage.py createsuperuser
+docker-compose ps
 ```
 
-### Troubleshooting Tips
+## 🔐 Security Notes
 
-1. **Database Connection Issues**:
-   - Check if the database service is running: `docker compose ps`
-   - Verify the connection string in the backend settings
-   - Make sure database volume is created properly
-
-2. **Frontend Hot-Reload Not Working**:
-   - Ensure volumes are mapped correctly in docker-compose.yml
-   - Check that Docker is allowed sufficient resources
-
-3. **Backend API Not Accessible**:
-   - Verify CORS settings in the Django backend
-   - Check network configuration in docker-compose.yml
-
-4. **Fixture Loading Issues**:
-   - Ensure fixtures are in the correct location (usually in a `fixtures` directory)
-   - Check that the fixture files are properly formatted JSON
-   - Verify that the model dependencies are loaded in the correct order
-   - If a fixture fails, check the error message for specific issues
-   - For automated loading, check the entrypoint script logs
-
----
-
-## ☁️ Phase 4: AWS ECR Integration (`feature/aws-ecr`)
-
-Once your Docker setup works locally, you can push images to AWS ECR for deployment.
-
-### Step 1: Set Up AWS CLI
-
-Install and configure AWS CLI:
-
-```bash
-# Install AWS CLI
-pip install awscli
-
-# Configure credentials
-aws configure
-```
-
-### Step 2: Authenticate with ECR
-
-```bash
-aws ecr get-login-password --region <your-region> | docker login --username AWS --password-stdin <your-account-id>.dkr.ecr.<your-region>.amazonaws.com
-```
-
-### Step 3: Create ECR Repositories
-
-```bash
-aws ecr create-repository --repository-name bonsai-backend
-aws ecr create-repository --repository-name bonsai-frontend
-```
-
-### Step 4: Tag and Push Images
-
-```bash
-# Build images
-docker compose build
-
-# Tag images
-docker tag bonsai-backend:latest <account-id>.dkr.ecr.<region>.amazonaws.com/bonsai-backend:latest
-docker tag bonsai-frontend:latest <account-id>.dkr.ecr.<region>.amazonaws.com/bonsai-frontend:latest
-
-# Push images
-docker push <account-id>.dkr.ecr.<region>.amazonaws.com/bonsai-backend:latest
-docker push <account-id>.dkr.ecr.<region>.amazonaws.com/bonsai-frontend:latest
-```
-
----
-
-## 🤖 Phase 5: CI/CD with GitHub Actions (`feature/github-actions-cicd`)
-
-### Create GitHub Actions Workflow
-
-Create a file at `.github/workflows/deploy-ecr.yml`:
-
-```yaml
-name: Build and Push to ECR
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  push-to-ecr:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v3
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: Log in to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build and Push Backend Image
-        run: |
-          docker build -t bonsai-backend ./apps/backend
-          docker tag bonsai-backend:latest ${{ steps.login-ecr.outputs.registry }}/bonsai-backend:latest
-          docker push ${{ steps.login-ecr.outputs.registry }}/bonsai-backend:latest
-
-      - name: Build and Push Frontend Image
-        run: |
-          docker build -t bonsai-frontend ./apps/frontend
-          docker tag bonsai-frontend:latest ${{ steps.login-ecr.outputs.registry }}/bonsai-frontend:latest
-          docker push ${{ steps.login-ecr.outputs.registry }}/bonsai-frontend:latest
-```
-
-### Add GitHub Secrets
-
-In your GitHub repository settings, add these secrets:
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
-
----
-
-## 🚀 Production Considerations
-
-### Security Enhancements
-
-1. **Use Environment Variables**: 
-   - Replace hardcoded credentials with environment variables
-   - Use `.env` files (added to `.gitignore`) for local development
-   - Use secrets management for production
-
-2. **Multi-stage Builds**:
-   - Minimize image size by using multi-stage builds
-   - Remove build tools from final images
-
-3. **Container Scanning**:
-   - Implement vulnerability scanning for container images
-
-### Performance Optimizations
-
-1. **Caching Strategies**:
-   - Configure volume caching for faster builds
-   - Use appropriate cache policies in Nginx
-
-2. **Resource Limits**:
-   - Set CPU and memory limits in production compose files
-
-### Example Production Docker Compose
-
-Create a `docker-compose.prod.yml`:
-
-```yaml
-version: '3.8'
-
-services:
-  backend:
-    image: ${ECR_REGISTRY}/bonsai-backend:latest
-    restart: always
-    environment:
-      - DEBUG=False
-      - ALLOWED_HOSTS=your-domain.com
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 512M
-
-  frontend:
-    image: ${ECR_REGISTRY}/bonsai-frontend:latest
-    restart: always
-    deploy:
-      resources:
-        limits:
-          cpus: '0.25'
-          memory: 256M
-
-  db:
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
-    environment:
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-```
-
----
-
-## 📁 Recommended Project Structure
-
-```
-bonsai/
-├── .github/
-│   └── workflows/
-│       └── deploy-ecr.yml
-├── apps/
-│   ├── backend/
-│   │   ├── Dockerfile
-│   │   ├── .dockerignore
-│   │   ├── entrypoint.sh
-│   │   ├── manage.py
-│   │   ├── fixtures/
-│   │   │   ├── users.json
-│   │   │   ├── products.json
-│   │   │   ├── posts.json
-│   │   │   ├── reviews.json
-│   │   │   └── comments.json
-│   │   └── ...
-│   └── frontend/
-│       ├── Dockerfile
-│       ├── Dockerfile.dev
-│       ├── .dockerignore
-│       ├── nginx.conf
-│       └── ...
-├── docker-compose.yml
-├── docker-compose.dev.yml
-├── docker-compose.prod.yml
-├── .env.example
-└── README.md
-```
-
----
+1. Never commit the `.env` file to version control
+2. Always use strong passwords in production
+3. Replace all API keys with your own secure keys
+4. Consider using Docker secrets in production
+5. Keep all packages and dependencies updated
 
 ## 📚 Additional Resources
 
-- [Official Docker Documentation](https://docs.docker.com/)
-- [Django with Docker Compose Guide](https://docs.docker.com/samples/django/)
-- [React with Docker Guide](https://mherman.org/blog/dockerizing-a-react-app/)
-- [AWS ECR Documentation](https://docs.aws.amazon.com/ecr/)
-- [Django Fixtures Documentation](https://docs.djangoproject.com/en/3.9/howto/initial-data/)
-
----
-
-## ✅ Next Steps
-
-After validating your Docker setup locally:
-
-1. Merge your work into `main` via PR
-2. Move on to `feature/docker-compose-prod` or Kubernetes setup!
-3. Configure CI/CD pipelines with GitHub Actions
-
-Happy coding! 🌱 
+- [Docker Documentation](https://docs.docker.com/)
+- [Docker Compose Documentation](https://docs.docker.com/compose/)
+- [Django Documentation](https://docs.djangoproject.com/)
+- [Vite Documentation](https://vitejs.dev/)
+- [Nginx Documentation](https://nginx.org/en/docs/) 
