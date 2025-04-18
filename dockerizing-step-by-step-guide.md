@@ -1,13 +1,16 @@
 # Dockerizing Your Django Backend: Step-by-Step Guide
 
 ## Prerequisites
+
 - Docker and Docker Compose installed
 - Your Django project with the current structure
 
 ## Step 1: Create Docker Configuration Files
 
 ### 1. Dockerfile for Backend
+
 Create `apps/backend/Dockerfile`:
+
 ```dockerfile
 FROM python:3.11-slim AS builder
 
@@ -49,29 +52,109 @@ CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 ```
 
 ### 2. Entrypoint Script
+
 Create `apps/backend/entrypoint.sh`:
+
 ```bash
-#!/bin/sh
+#!/bin/bash
 
-# Wait for PostgreSQL
-echo "Waiting for PostgreSQL..."
-while ! nc -z $DB_HOST $DB_PORT; do
-  sleep 0.1
+# Function to check if postgres is up and ready
+function postgres_ready(){
+python << END
+import sys
+import psycopg2
+try:
+    conn = psycopg2.connect(
+        dbname="${DB_NAME}",
+        user="${DB_USER}",
+        password="${DB_PASSWORD}",
+        host="${DB_HOST}",
+        port="${DB_PORT}"
+    )
+except psycopg2.OperationalError:
+    sys.exit(-1)
+sys.exit(0)
+END
+}
+
+echo "Waiting for PostgreSQL to be ready..."
+# Wait for postgres to be ready
+until postgres_ready; do
+  sleep 2
 done
-echo "PostgreSQL started"
+echo "PostgreSQL is ready!"
 
-# Run migrations
+# Apply database migrations
+echo "Applying database migrations..."
 python manage.py migrate
 
 # Collect static files
+echo "Collecting static files..."
 python manage.py collectstatic --noinput
 
-# Start server
+# Create superuser if environment variables are set
+if [ -n "${DJANGO_SUPERUSER_USERNAME}" ] && [ -n "${DJANGO_SUPERUSER_EMAIL}" ] && [ -n "${DJANGO_SUPERUSER_PASSWORD}" ]; then
+    echo "Creating superuser..."
+    python manage.py shell -c "
+from django.contrib.auth import get_user_model;
+User = get_user_model();
+try:
+    # Remove any existing superusers
+    User.objects.filter(is_superuser=True).delete()
+
+    # Create new superuser with correct format
+    User.objects.create_superuser(
+        username='admin',
+        email='admin@mail.com',
+        password='adminpassword'
+    )
+    print('Superuser created successfully')
+except Exception as e:
+    print(f'Error creating superuser: {e}')
+"
+fi
+
+# Load initial data if needed
+if [ "${LOAD_INITIAL_DATA}" = "True" ]; then
+    echo "Loading initial data..."
+    if [ -f "users.json" ]; then python manage.py loaddata users.json; fi
+    if [ -f "products.json" ]; then python manage.py loaddata products.json; fi
+    if [ -f "reviews.json" ]; then python manage.py loaddata reviews.json; fi
+    if [ -f "posts.json" ]; then python manage.py loaddata posts.json; fi
+    if [ -f "comments.json" ]; then python manage.py loaddata comments.json; fi
+fi
+
+# Create health check module and view
+mkdir -p health_check
+echo "from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def health_view(request):
+    return HttpResponse('OK', status=200)" > health_check/__init__.py
+
+# Add health check URL pattern to urls.py if it doesn't exist
+if ! grep -q "health_check" "backend/urls.py"; then
+    # Create a backup of the original file
+    cp backend/urls.py backend/urls.py.bak
+
+    # Add import for health_check
+    sed -i "s/from django.conf.urls.static import static/from django.conf.urls.static import static\nfrom health_check import health_view/" backend/urls.py
+
+    # Add health check URL pattern
+    sed -i "s/\]$/    path('health\/', health_view, name='health'),\n]/" backend/urls.py
+
+    echo "Added health check endpoint to urls.py"
+fi
+
+# Execute the command passed to the entrypoint
 exec "$@"
 ```
 
 ### 3. Dockerfile for Frontend
+
 Create `apps/frontend/Dockerfile`:
+
 ```dockerfile
 FROM node:16-alpine
 
@@ -97,6 +180,7 @@ CMD ["npm", "start"]
 ## Step 2: Create Docker Compose Configuration
 
 Create `docker-compose.yml` in the root directory:
+
 ```yaml
 version: '3.8'
 
@@ -114,7 +198,7 @@ services:
     env_file:
       - .env
     ports:
-      - "8000:8000"
+      - '8000:8000'
     depends_on:
       - db
     networks:
@@ -136,7 +220,7 @@ services:
     env_file:
       - .env
     ports:
-      - "3000:3000"
+      - '3000:3000'
     depends_on:
       - backend
     networks:
@@ -152,7 +236,7 @@ services:
     env_file:
       - .env
     ports:
-      - "5432:5432"
+      - '5432:5432'
     networks:
       - bonsai_network
 
@@ -222,12 +306,15 @@ RDS_MULTI_AZ=false
 ```
 
 Important Notes:
-1. Replace all placeholder values (like 'your-secret-key-here') with actual secure values
+
+1. Replace all placeholder values (like 'your-secret-key-here') with actual
+   secure values
 2. For development, you can use simpler values for database credentials
 3. Email configuration is optional but required for password reset functionality
 4. API keys should be kept secure and not committed to version control
 5. AWS configuration is only needed for production deployment
-6. Make sure to add .env to your .gitignore file to prevent committing sensitive information
+6. Make sure to add .env to your .gitignore file to prevent committing sensitive
+   information
 
 ## Step 4: Build and Start the Services
 
@@ -268,15 +355,18 @@ docker-compose exec backend python manage.py collectstatic --noinput
 ## Step 7: Development Workflow
 
 ### Making Changes
+
 - Backend changes are automatically reflected due to volume mounting
 - Frontend changes are automatically reflected due to volume mounting
 - Database changes require migrations:
+
 ```bash
 docker-compose exec backend python manage.py makemigrations
 docker-compose exec backend python manage.py migrate
 ```
 
 ### Stopping Services
+
 ```bash
 # Stop all services
 docker-compose down
@@ -290,10 +380,12 @@ docker-compose down -v
 ### Common Issues
 
 1. **Port Conflicts**
+
    - Ensure ports 3000, 8000, and 5432 are not in use
    - Check with: `netstat -tuln | grep <port>`
 
 2. **Database Connection Issues**
+
    - Verify database credentials in `.env`
    - Check database logs: `docker-compose logs db`
 
