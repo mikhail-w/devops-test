@@ -116,6 +116,9 @@ docker ps -a && echo "---" && docker images
 ## 2. Docker Compose Commands
 
 ```bash
+# Stop everything and rebuild service
+docker compose down && docker compose up --build -d
+
 # Build and start services
 docker compose up
 docker compose up --build  # Rebuild images before starting containers
