@@ -1,16 +1,14 @@
-import { useState, useEffect } from 'react';
 import { useLoadScript } from '@react-google-maps/api';
 
-const LIBRARIES = ['places']; // Define libraries as a constant outside
+const LIBRARIES = ['places'];
 
 const useMapLogic = () => {
-  const apiKey = process.env.VITE_GOOGLE_MAPS_API_KEY;
-  
-  console.log('Google Maps API Key:', apiKey); // Debug line to check the key
+  // Get API key from runtime environment variables
+  const apiKey = window._env_?.VITE_GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
   
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: apiKey,
-    libraries: LIBRARIES, // Use the constant
+    libraries: LIBRARIES,
   });
 
   if (loadError) {

@@ -151,15 +151,16 @@ const MapContainer = ({
       // Initialize with the default image
       let photoUrl = DefaultImg;
       
-      // Safely try to get the photo URL with error handling
+      // Safely try to get the photo URL with rate limiting consideration
       if (place.photos && place.photos.length > 0) {
         try {
+          // Add maxWidth parameter to reduce image size and help with rate limiting
           photoUrl = place.photos[0].getUrl({
-            maxWidth: 400,
-            maxHeight: 400
+            maxWidth: 200, // Reduced from 400 to help with rate limiting
+            maxHeight: 200 // Reduced from 400 to help with rate limiting
           });
         } catch (photoError) {
-          console.error('Error getting photo URL:', photoError);
+          console.warn('Photo loading error for place:', place.name, photoError);
           // Fall back to default image silently
         }
       }
@@ -172,13 +173,12 @@ const MapContainer = ({
           lng: place.geometry.location.lng(),
         },
         vicinity: place.vicinity,
-        photos: place.photos,
         rating: place.rating || 0,
         reviewCount: place.user_ratings_total || 0,
         isOpen: place.opening_hours?.isOpen() || false,
         types: place.types || [],
-        photo: photoUrl, // This is now always set to either a valid URL or the default image
-        photoFailed: false // Add flag to track if photo loading failed
+        photo: photoUrl,
+        photoFailed: false
       };
     } catch (error) {
       console.error('Error processing place:', error);
