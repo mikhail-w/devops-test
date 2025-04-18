@@ -1,8 +1,12 @@
 import axios from 'axios';
 
+// Define API URLs from environment variables
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL || `${API_BASE_URL}/api`;
+
 // Create axios instance with default config
 const axiosInstance = axios.create({
-  baseURL: '/',  // Use relative URL since we're proxying through Vite
+  baseURL: API_URL,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
@@ -14,12 +18,12 @@ axiosInstance.interceptors.request.use(
   (config) => {
     // Only add authorization header for protected routes
     const protectedRoutes = [
-      '/api/users/',
-      '/api/orders/',
-      '/api/products/create/',
-      '/api/products/delete/',
-      '/api/products/update/',
-      '/api/blog/',
+      '/users/',
+      '/orders/',
+      '/products/create/',
+      '/products/delete/',
+      '/products/update/',
+      '/blog/',
     ];
 
     // Check if the current request path matches any protected route
@@ -55,4 +59,6 @@ axiosInstance.interceptors.response.use(
   }
 );
 
-export default axiosInstance; 
+// Export both the axios instance and the API URLs for reuse
+export default axiosInstance;
+export { API_BASE_URL, API_URL };

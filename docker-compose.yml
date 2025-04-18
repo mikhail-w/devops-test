@@ -1,9 +1,11 @@
+
 services:
   backend:
     build:
       context: ./apps/backend
       dockerfile: Dockerfile
-    env_file: .env
+    env_file: 
+      - ./.env
     environment:
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
@@ -16,6 +18,7 @@ services:
       - DJANGO_DEBUG=${DEBUG}
       - DJANGO_ALLOWED_HOSTS=${ALLOWED_HOSTS}
       - LOAD_INITIAL_DATA=True
+      - API_BASE_URL=${API_BASE_URL}
     volumes:
       - ./apps/backend:/app
       - ./apps/backend/media:/app/media
@@ -47,8 +50,9 @@ services:
       dockerfile: Dockerfile
     env_file: .env
     environment:
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL}
       - VITE_API_URL=${VITE_API_URL}
-      - VITE_API_URL_PUBLIC=http://localhost:8000
+      - VITE_MEDIA_URL=${VITE_MEDIA_URL}
       - VITE_WEATHER_API_KEY=${VITE_WEATHER_API_KEY}
       - VITE_PAYPAL_CLIENT_ID=${VITE_PAYPAL_CLIENT_ID}
       - VITE_GOOGLE_MAPS_API_KEY=${VITE_GOOGLE_MAPS_API_KEY}

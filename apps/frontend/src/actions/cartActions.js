@@ -1,3 +1,4 @@
+import axios from 'axios';
 import {
   CART_ADD_ITEM,
   CART_REMOVE_ITEM,
@@ -5,11 +6,22 @@ import {
   CART_SAVE_PAYMENT_METHOD,
   CART_CLEAR_ITEMS,
 } from '../constants/cartConstants';
-import axiosInstance from '../utils/axiosConfig';
+
+// Define API URLs from environment variables
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL || `${API_BASE_URL}/api`;
+
+// Create axios instance with consistent configuration
+const axiosClient = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
 export const addToCart = (id, qty) => async (dispatch, getState) => {
   try {
-    const { data } = await axiosInstance.get(`/api/products/${id}/`);
+    const { data } = await axiosClient.get(`/products/${id}/`);
 
     dispatch({
       type: CART_ADD_ITEM,
