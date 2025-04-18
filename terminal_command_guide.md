@@ -1011,6 +1011,15 @@ VACUUM ANALYZE;                          # Analyze database
 ANALYZE auth_user;                       # Analyze specific table
 SELECT pg_size_pretty(pg_database_size('bonsai')); # DB size
 
+# Check postgres status
+systemctl status postgresql | cat
+
+# Start postgres
+sudo systemctl start postgresql
+
+# Access postgres
+sudo -u postgres psql
+
 # Create database from command line
 sudo -u postgres createdb bonsai
 sudo -u postgres createuser bonsai_user
@@ -1038,6 +1047,74 @@ psql -U postgres -d bonsai -c "SELECT table_name, pg_size_pretty(pg_total_relati
 
 # Kill all connections to database (for maintenance)
 psql -U postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='bonsai' AND pid <> pg_backend_pid();"
+
+# Database and Table Management
+psql -U postgres -c "DROP DATABASE IF EXISTS bonsai;"  # Delete database
+psql -U postgres -c "DROP TABLE IF EXISTS users CASCADE;"  # Delete table with dependencies
+psql -U postgres -c "TRUNCATE TABLE users CASCADE;"  # Clear table data but keep structure
+psql -U postgres -c "ALTER TABLE users RENAME TO customers;"  # Rename table
+psql -U postgres -c "ALTER TABLE users ADD COLUMN email VARCHAR(255);"  # Add column
+psql -U postgres -c "ALTER TABLE users DROP COLUMN email;"  # Remove column
+psql -U postgres -c "ALTER TABLE users ALTER COLUMN name TYPE VARCHAR(100);"  # Change column type
+
+# User and Role Management
+psql -U postgres -c "CREATE ROLE bonsai_admin WITH LOGIN PASSWORD 'password';"  # Create role
+psql -U postgres -c "ALTER ROLE bonsai_admin WITH SUPERUSER;"  # Grant superuser
+psql -U postgres -c "DROP ROLE IF EXISTS bonsai_admin;"  # Delete role
+psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE bonsai TO bonsai_admin;"  # Grant database privileges
+psql -U postgres -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO bonsai_admin;"  # Grant table privileges
+
+# Schema Management
+psql -U postgres -c "CREATE SCHEMA bonsai_schema;"  # Create schema
+psql -U postgres -c "DROP SCHEMA IF EXISTS bonsai_schema CASCADE;"  # Delete schema
+psql -U postgres -c "ALTER SCHEMA public RENAME TO bonsai_schema;"  # Rename schema
+psql -U postgres -c "GRANT USAGE ON SCHEMA bonsai_schema TO bonsai_admin;"  # Grant schema usage
+
+# Index Management
+psql -U postgres -c "CREATE INDEX idx_users_email ON users(email);"  # Create index
+psql -U postgres -c "DROP INDEX IF EXISTS idx_users_email;"  # Delete index
+psql -U postgres -c "REINDEX TABLE users;"  # Rebuild index
+psql -U postgres -c "CREATE UNIQUE INDEX idx_users_email ON users(email);"  # Create unique index
+
+# Constraint Management
+psql -U postgres -c "ALTER TABLE users ADD CONSTRAINT pk_users PRIMARY KEY (id);"  # Add primary key
+psql -U postgres -c "ALTER TABLE users ADD CONSTRAINT fk_users_group FOREIGN KEY (group_id) REFERENCES groups(id);"  # Add foreign key
+psql -U postgres -c "ALTER TABLE users DROP CONSTRAINT pk_users;"  # Remove constraint
+psql -U postgres -c "ALTER TABLE users ADD CONSTRAINT chk_age CHECK (age >= 0);"  # Add check constraint
+
+# View Management
+psql -U postgres -c "CREATE VIEW active_users AS SELECT * FROM users WHERE is_active = true;"  # Create view
+psql -U postgres -c "DROP VIEW IF EXISTS active_users;"  # Delete view
+psql -U postgres -c "ALTER VIEW active_users RENAME TO active_customers;"  # Rename view
+
+# Transaction Management
+psql -U postgres -c "BEGIN;"  # Start transaction
+psql -U postgres -c "COMMIT;"  # Commit transaction
+psql -U postgres -c "ROLLBACK;"  # Rollback transaction
+
+# Performance Monitoring
+psql -U postgres -c "SELECT * FROM pg_stat_activity;"  # View active connections
+psql -U postgres -c "SELECT * FROM pg_stat_user_tables;"  # View table statistics
+psql -U postgres -c "SELECT * FROM pg_stat_user_indexes;"  # View index statistics
+psql -U postgres -c "EXPLAIN ANALYZE SELECT * FROM users WHERE email = 'test@example.com';"  # Analyze query performance
+
+# Database Maintenance
+psql -U postgres -c "VACUUM FULL users;"  # Reclaim space and update statistics
+psql -U postgres -c "REINDEX DATABASE bonsai;"  # Rebuild all indexes
+psql -U postgres -c "ANALYZE users;"  # Update statistics for query planner
+psql -U postgres -c "CHECKPOINT;"  # Force write of dirty buffers to disk
+
+# Backup and Restore with Options
+pg_dump -h localhost -U postgres -d bonsai --schema-only > schema.sql  # Backup schema only
+pg_dump -h localhost -U postgres -d bonsai --data-only > data.sql  # Backup data only
+pg_dump -h localhost -U postgres -d bonsai --exclude-table=users > backup.sql  # Exclude specific table
+pg_dump -h localhost -U postgres -d bonsai --inserts > backup.sql  # Use INSERT statements
+pg_dump -h localhost -U postgres -d bonsai --column-inserts > backup.sql  # Include column names in INSERTs
+
+# Database Migration
+psql -U postgres -c "CREATE DATABASE bonsai_new TEMPLATE bonsai;"  # Create new database from template
+psql -U postgres -c "ALTER DATABASE bonsai RENAME TO bonsai_old;"  # Rename database
+psql -U postgres -c "ALTER DATABASE bonsai_new RENAME TO bonsai;"  # Rename new database
 ```
 
 ---
