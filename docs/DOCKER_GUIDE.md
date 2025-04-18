@@ -581,33 +581,6 @@ volumes:
   static_volume:
 ```
 
-## 🌐 Application Access
-
-After starting the containers, you can access the application through the following endpoints:
-
-### Frontend Application
-- Main Application: http://localhost:3000
-- Health Check: http://localhost:3000/health
-
-### Backend Services
-- Admin Console: http://localhost:8000/admin
-  - Default admin credentials (if using example .env):
-    - Username: admin
-    - Email: admin@example.com
-    - Password: your_admin_password_here
-- API Root: http://localhost:8000/api
-- API Documentation: http://localhost:8000/api/docs
-- Health Check: http://localhost:8000/health
-
-### Development Tools
-- Database (PostgreSQL):
-  - Host: localhost
-  - Port: 5432
-  - Database: bonsai_store
-  - Username: postgres
-  - Password: (as specified in .env)
-
-Note: Make sure to replace any default credentials with secure values in production.
 
 ## 🛠️ Common Commands
 
@@ -650,7 +623,145 @@ docker-compose ps
 
 # View container resource usage
 docker stats
+
+# List all Docker images
+docker images
+docker images -a  # Show all images including intermediate layers
+docker images --no-trunc  # Show full image IDs
+docker images --format "{{.ID}}: {{.Repository}}:{{.Tag}}"  # Custom format
+docker images --filter "dangling=true"  # Show only dangling images
+
+# List running containers
+docker ps
+docker ps -a  # Show all containers including stopped ones
+docker ps -q  # Show only container IDs
+docker ps --format "{{.ID}}: {{.Names}} - {{.Status}}"  # Custom format
+docker ps --filter "status=running"  # Show only running containers
+docker ps --filter "name=backend"  # Filter by name
+docker ps --filter "ancestor=python:3.11-alpine"  # Filter by base image
+
+# List Docker volumes
+docker volume ls
+docker volume ls --filter "dangling=true"  # Show only unused volumes
+
+# List Docker networks
+docker network ls
+docker network inspect app-network  # Show detailed network info
+
+# Clean up Docker system
+# Remove all stopped containers
+docker container prune
+
+# Remove all unused images
+docker image prune
+
+# Remove all unused volumes
+docker volume prune
+
+# Remove all unused networks
+docker network prune
+
+# Remove all unused objects (containers, images, volumes, networks)
+docker system prune
+
+# Remove all unused objects including dangling images
+docker system prune -a
+
+# Force remove all containers (including running ones)
+docker rm -f $(docker ps -aq)
+
+# Force remove all images
+docker rmi -f $(docker images -aq)
+
+# Rebuild specific service
+docker-compose up -d --build backend
+docker-compose up -d --build frontend
+
+# Scale services
+docker-compose up -d --scale backend=2
+docker-compose up -d --scale frontend=3
+
+# View detailed container information
+docker inspect <container_id>
+
+# View container resource usage in real-time
+docker stats <container_id>
+
+# Copy files from container to host
+docker cp <container_id>:<container_path> <host_path>
+
+# Copy files from host to container
+docker cp <host_path> <container_id>:<container_path>
+
+# View container logs with timestamps
+docker-compose logs -f --timestamps
+
+# View container logs from specific time
+docker-compose logs -f --since "2024-01-01"
+
+# View container logs with specific number of lines
+docker-compose logs -f --tail=100
+
+# Execute interactive shell in container
+docker-compose exec backend sh
+docker-compose exec frontend sh
+docker-compose exec db psql -U postgres
+
+# View container environment variables
+docker-compose exec backend env
+docker-compose exec frontend env
+
+# View container processes
+docker-compose exec backend ps aux
+docker-compose exec frontend ps aux
+
+# View container network configuration
+docker-compose exec backend ip addr
+docker-compose exec frontend ip addr
+
+# View container disk usage
+docker-compose exec backend df -h
+docker-compose exec frontend df -h
 ```
+
+## 🌐 Application Access
+
+After starting the containers, you can access the application through the following endpoints:
+
+### Frontend Application
+- Main Application: http://localhost:3000
+
+### Backend Services
+- Admin Console: http://localhost:8000/admin
+  - Default admin credentials (if using example .env):
+    - Username: admin
+    - Email: admin@example.com
+    - Password: your_admin_password_here
+- API Root: http://localhost:8000/api
+- API Documentation: http://localhost:8000/api/docs
+
+### Health Checks
+
+The application includes health check endpoints for all services:
+
+- Frontend: http://localhost:3000/health
+- Backend: http://localhost:8000/health/
+- Database: Automatically checked via Docker health checks
+
+You can monitor the health status using:
+```bash
+docker-compose ps
+```
+
+### Development Tools
+- Database (PostgreSQL):
+  - Host: localhost
+  - Port: 5432
+  - Database: bonsai_store
+  - Username: postgres
+  - Password: (as specified in .env)
+
+Note: Make sure to replace any default credentials with secure values in production.
 
 ## 🔍 Troubleshooting
 
@@ -708,19 +819,6 @@ docker stats
    sudo chown -R $USER:$USER apps/backend/staticfiles
    ```
 
-### Health Checks
-
-The application includes health check endpoints for all services:
-
-- Backend: http://localhost:8000/health/
-- Frontend: http://localhost:3000/health
-- Database: Automatically checked via Docker health checks
-
-You can monitor the health status using:
-```bash
-docker-compose ps
-```
-
 ## 🔐 Security Notes
 
 1. Never commit the `.env` file to version control
@@ -735,4 +833,4 @@ docker-compose ps
 - [Docker Compose Documentation](https://docs.docker.com/compose/)
 - [Django Documentation](https://docs.djangoproject.com/)
 - [Vite Documentation](https://vitejs.dev/)
-- [Nginx Documentation](https://nginx.org/en/docs/) 
+- [Nginx Documentation](https://nginx.org/en/docs/)
