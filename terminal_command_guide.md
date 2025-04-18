@@ -1278,7 +1278,7 @@ cat > backend/.env << EOF
 DEBUG=True
 SECRET_KEY=your_secret_key_here
 ALLOWED_HOSTS=localhost,127.0.0.1
-DB_NAME=bonsai_db
+DB_NAME=bonsai_store
 DB_USER=bonsai_user
 DB_PASSWORD=password
 DB_HOST=localhost

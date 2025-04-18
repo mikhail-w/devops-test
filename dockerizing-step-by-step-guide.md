@@ -9,7 +9,7 @@
 ### 1. Dockerfile for Backend
 Create `apps/backend/Dockerfile`:
 ```dockerfile
-FROM python:3.11-slim
+FROM python:3.11-slim AS builder
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -172,7 +172,7 @@ Create `.env` file in the root directory with the following variables:
 
 ```bash
 # Database Configuration
-DB_NAME=bonsai_db
+DB_NAME=bonsai_store
 DB_USER=postgres
 DB_PASSWORD=postgres
 DB_HOST=db

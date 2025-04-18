@@ -553,7 +553,7 @@ DJANGO_SECRET_KEY=your-secret-key-here
 ALLOWED_HOSTS=localhost,127.0.0.1
 
 # Database Settings
-DB_NAME=bonsai_db
+DB_NAME=bonsai_store
 DB_USER=postgres
 DB_PASSWORD=postgres
 DB_HOST=db
@@ -654,7 +654,7 @@ Properly managing secrets and environment variables is crucial for security and 
 
 ```bash
 # Database Configuration
-DB_NAME=bonsai
+DB_NAME=bonsai_store
 DB_USER=postgres
 DB_PASSWORD=your_password_here
 DB_HOST=db

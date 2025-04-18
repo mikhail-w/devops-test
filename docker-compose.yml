@@ -7,16 +7,16 @@ services:
       dockerfile: Dockerfile
     env_file: .env
     environment:
-      - DB_NAME=bonsai_store
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DJANGO_SUPERUSER_USERNAME=admin
-      - DJANGO_SUPERUSER_EMAIL=admin@mail.com
-      - DJANGO_SUPERUSER_PASSWORD=adminpassword
-      - DJANGO_DEBUG=True
-      - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,backend,*
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DJANGO_SUPERUSER_USERNAME=${ADMIN_USERNAME}
+      - DJANGO_SUPERUSER_EMAIL=${ADMIN_EMAIL}
+      - DJANGO_SUPERUSER_PASSWORD=${ADMIN_PASSWORD}
+      - DJANGO_DEBUG=${DEBUG}
+      - DJANGO_ALLOWED_HOSTS=${ALLOWED_HOSTS}
       - LOAD_INITIAL_DATA=True
     volumes:
       - ./apps/backend:/app
@@ -48,7 +48,7 @@ services:
     build:
       context: ./apps/frontend
       dockerfile: Dockerfile
-    env_file: ./apps/frontend/.env
+    env_file: .env
     environment:
       - VITE_API_URL=http://backend:8000
       - VITE_API_URL_PUBLIC=http://localhost:8000
@@ -78,12 +78,13 @@ services:
 
   db:
     image: postgres:13-alpine
+    env_file: .env
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=bonsai_store
     ports:
       - "5432:5432"
     networks:
