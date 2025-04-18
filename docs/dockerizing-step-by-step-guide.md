@@ -1,13 +1,16 @@
 # Dockerizing Your Django Backend: Step-by-Step Guide
 
 ## Prerequisites
+
 - Docker and Docker Compose installed
 - Your Django project with the current structure
 
 ## Step 1: Create Docker Configuration Files
 
 ### 1. Dockerfile for Backend
+
 Create `apps/backend/Dockerfile`:
+
 ```dockerfile
 # Build stage
 FROM python:3.11-slim AS builder
@@ -75,7 +78,9 @@ CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 ```
 
 ### 2. Dockerfile for Frontend
+
 Create `apps/frontend/Dockerfile`:
+
 ```dockerfile
 # Build stage
 FROM node:18-alpine AS builder
@@ -143,12 +148,13 @@ CMD ["nginx", "-g", "daemon off;"]
 ## Step 2: Create Docker Compose Configuration
 
 Create `docker-compose.yml` in the root directory:
+
 ```yaml
 version: '3.8'
 
 services:
   backend:
-    build: 
+    build:
       context: ./apps/backend
       dockerfile: Dockerfile
     env_file: .env
@@ -169,7 +175,7 @@ services:
       - ./apps/backend/media:/app/media
       - static_volume:/app/staticfiles
     ports:
-      - "8000:8000"
+      - '8000:8000'
     depends_on:
       db:
         condition: service_healthy
@@ -180,11 +186,11 @@ services:
       - 8.8.4.4
       - 1.1.1.1
     extra_hosts:
-      - "host.docker.internal:host-gateway"
-      - "api.quotable.io:3.33.148.61"
+      - 'host.docker.internal:host-gateway'
+      - 'api.quotable.io:3.33.148.61'
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health/']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -203,7 +209,7 @@ services:
       - VITE_GOOGLE_MAPS_API_KEY=${VITE_GOOGLE_MAPS_API_KEY}
       - VITE_GOOGLE_CLOUD_VISION_API_KEY=${VITE_GOOGLE_CLOUD_VISION_API_KEY}
     ports:
-      - "3000:80"
+      - '3000:80'
     depends_on:
       - backend
     networks:
@@ -213,10 +219,10 @@ services:
       - 8.8.4.4
       - 1.1.1.1
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - 'host.docker.internal:host-gateway'
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -232,11 +238,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - '5432:5432'
     networks:
       - app-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -254,7 +260,9 @@ volumes:
 ## Step 3: Environment Configuration
 
 ### 1. Root Directory Configuration
-Create a `.env.example` file in your project root (and add `.env` to your .gitignore):
+
+Create a `.env.example` file in your project root (and add `.env` to your
+.gitignore):
 
 ```env
 # Database Configuration
@@ -299,6 +307,7 @@ AWS_S3_REGION_NAME=your_region
 ```
 
 ### 2. Backend Environment Configuration
+
 Create `apps/backend/.env.example`:
 
 ```env
@@ -349,11 +358,12 @@ AWS_S3_CUSTOM_DOMAIN=your_cloudfront_domain
 ```
 
 ### 3. Frontend Environment Configuration
+
 Create `apps/frontend/.env.example`:
 
 ```env
 # API Configuration
-VITE_API_URL=http://localhost:8000/api/
+VITE_API_URL=http://localhost:8000/
 VITE_API_BASE_URL=http://localhost:8000/api
 VITE_API_VERSION=v1
 
@@ -405,13 +415,14 @@ VITE_GOOGLE_CLOUD_VISION_API_KEY=your_vision_api_key
 ### Environment Files Setup Instructions
 
 1. Copy each `.env.example` file to create corresponding `.env` files:
+
    ```bash
    # Root directory
    cp .env.example .env
-   
+
    # Backend
    cp apps/backend/.env.example apps/backend/.env
-   
+
    # Frontend
    cp apps/frontend/.env.example apps/frontend/.env
    ```
@@ -429,12 +440,14 @@ VITE_GOOGLE_CLOUD_VISION_API_KEY=your_vision_api_key
 ## Security Best Practices
 
 1. Environment Variables:
+
    - NEVER commit `.env` files to version control
    - Always use `.env.example` with dummy values as a template
    - Use strong, unique passwords in production
    - Keep API keys secure and rotate them regularly
 
 2. Docker Security:
+
    - Use multi-stage builds to minimize image size
    - Run containers as non-root users when possible
    - Keep base images updated
@@ -442,6 +455,7 @@ VITE_GOOGLE_CLOUD_VISION_API_KEY=your_vision_api_key
    - Use specific version tags instead of 'latest'
 
 3. Application Security:
+
    - Set DEBUG=False in production
    - Use secure CORS settings
    - Enable appropriate security headers
@@ -457,22 +471,26 @@ VITE_GOOGLE_CLOUD_VISION_API_KEY=your_vision_api_key
 ## Usage Instructions
 
 1. Copy `.env.example` to `.env` and fill in your values:
+
    ```bash
    cp .env.example .env
    ```
 
 2. Build and start services:
+
    ```bash
    docker-compose build
    docker-compose up -d
    ```
 
 3. Monitor logs:
+
    ```bash
    docker-compose logs -f
    ```
 
 4. Access services:
+
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:8000
    - Database: localhost:5432
@@ -485,11 +503,13 @@ VITE_GOOGLE_CLOUD_VISION_API_KEY=your_vision_api_key
 ## Troubleshooting
 
 1. Container Health Checks:
+
    ```bash
    docker-compose ps
    ```
 
 2. View Service Logs:
+
    ```bash
    docker-compose logs -f [service_name]
    ```
@@ -497,4 +517,4 @@ VITE_GOOGLE_CLOUD_VISION_API_KEY=your_vision_api_key
 3. Common Issues:
    - Port conflicts: Check if ports 3000, 8000, or 5432 are in use
    - Database connection: Verify DB_HOST and credentials
-   - Volume permissions: Check directory permissions 
+   - Volume permissions: Check directory permissions

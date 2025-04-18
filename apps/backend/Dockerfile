@@ -1,5 +1,5 @@
 # Build stage
-FROM python:3.11-slim AS builder
+FROM python:3.11-alpine AS builder
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -9,13 +9,15 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apk add --no-cache \
     gcc \
+    musl-dev \
+    postgresql-dev \
     postgresql-client \
     curl \
-    netcat-traditional \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    libffi-dev \
+    bash \
+    netcat-openbsd
 
 # Install Python dependencies
 COPY requirements.txt /app/
@@ -28,7 +30,7 @@ COPY . /app/
 RUN mkdir -p /app/media /app/staticfiles
 
 # Runtime stage
-FROM python:3.11-slim
+FROM python:3.11-alpine
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -37,12 +39,12 @@ ENV PYTHONUNBUFFERED=1
 # Set work directory
 WORKDIR /app
 
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Install runtime dependencies - ADDED BASH HERE
+RUN apk add --no-cache \
     postgresql-client \
-    netcat-traditional \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    netcat-openbsd \
+    bash \
+    curl
 
 # Copy only necessary files from builder
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
@@ -52,7 +54,7 @@ COPY --from=builder /app /app
 # Create media and static directories
 RUN mkdir -p /app/media /app/staticfiles
 
-# Make entrypoint script executable
+# Make entrypoint script executable and ensure it uses the correct interpreter
 COPY entrypoint.sh /app/
 RUN chmod +x /app/entrypoint.sh
 

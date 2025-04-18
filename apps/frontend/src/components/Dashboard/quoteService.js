@@ -15,9 +15,9 @@ const getRandomQuote = async (retries = 3, delay = 1000) => {
         timeout: 5000, // 5 second timeout
       };
 
-      const response = await axios.get(`${API_URL}quotes/random/`, config);
+      const response = await axios.get(`${API_URL}/api/quotes/random/`, config);
       return {
-        text: response.data.content,
+        content: response.data.content,
         author: response.data.author,
         tags: response.data.tags || []
       };

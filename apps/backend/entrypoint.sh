@@ -37,23 +37,33 @@ python manage.py collectstatic --noinput
 # Create superuser if environment variables are set
 if [ -n "${DJANGO_SUPERUSER_USERNAME}" ] && [ -n "${DJANGO_SUPERUSER_EMAIL}" ] && [ -n "${DJANGO_SUPERUSER_PASSWORD}" ]; then
     echo "Creating superuser..."
-    python manage.py shell -c "
-from django.contrib.auth import get_user_model;
-User = get_user_model();
+    python manage.py shell << END
+from django.contrib.auth import get_user_model
+from django.db import IntegrityError
+User = get_user_model()
+
 try:
-    # Remove any existing superusers
-    User.objects.filter(is_superuser=True).delete()
-    
-    # Create new superuser with correct format
-    User.objects.create_superuser(
-        username='admin',
-        email='admin@mail.com',
-        password='adminpassword'
-    )
-    print('Superuser created successfully')
+    if not User.objects.filter(username='${DJANGO_SUPERUSER_USERNAME}').exists():
+        user = User.objects.create_superuser(
+            username='${DJANGO_SUPERUSER_USERNAME}',
+            email='${DJANGO_SUPERUSER_EMAIL}',
+            password='${DJANGO_SUPERUSER_PASSWORD}'
+        )
+        print('Superuser created successfully')
+    else:
+        # Update existing superuser password
+        user = User.objects.get(username='${DJANGO_SUPERUSER_USERNAME}')
+        user.set_password('${DJANGO_SUPERUSER_PASSWORD}')
+        user.email = '${DJANGO_SUPERUSER_EMAIL}'
+        user.is_superuser = True
+        user.is_staff = True
+        user.save()
+        print('Superuser updated successfully')
+except IntegrityError as e:
+    print(f'Error: Could not create superuser - {str(e)}')
 except Exception as e:
-    print(f'Error creating superuser: {e}')
-"
+    print(f'Error: Unexpected error creating superuser - {str(e)}')
+END
 fi
 
 # Load initial data if needed

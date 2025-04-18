@@ -11,6 +11,7 @@ import {
   useColorModeValue,
 } from '@chakra-ui/react';
 import { MapPin, Navigation2, Star } from 'lucide-react';
+import DefaultImg from '../../assets/images/bonsai-tree-logo.png';
 
 const MapMarkerInfoWindow = ({
   selectedMarker,
@@ -98,7 +99,6 @@ const MapMarkerInfoWindow = ({
         overflow="hidden"
       >
         <VStack align="stretch" spacing={0}>
-          // In MapMarkerInfoWindow.jsx
           <Image
             src={selectedMarker.photo || DefaultImg}
             alt={`${selectedMarker.name} thumbnail`}

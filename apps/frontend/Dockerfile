@@ -1,5 +1,5 @@
 # Build stage
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 # Set work directory
 WORKDIR /app
@@ -43,11 +43,13 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY env.sh /docker-entrypoint.d/40-env.sh
 RUN chmod +x /docker-entrypoint.d/40-env.sh
 
-# Create a non-root user
-RUN adduser -D -H -u 1000 -s /bin/sh www-data && \
+# Handle www-data user/group properly (Alpine specific)
+RUN grep -q "^www-data:" /etc/group || addgroup -g 82 www-data && \
+    grep -q "^www-data:" /etc/passwd || adduser -D -H -u 1000 -s /bin/sh -G www-data www-data && \
     chown -R www-data:www-data /var/cache/nginx && \
     chown -R www-data:www-data /var/log/nginx && \
     chown -R www-data:www-data /etc/nginx/conf.d && \
+    chown -R www-data:www-data /usr/share/nginx/html && \
     touch /var/run/nginx.pid && \
     chown -R www-data:www-data /var/run/nginx.pid
 
@@ -58,4 +60,4 @@ USER www-data
 EXPOSE 80
 
 # Start nginx
-CMD ["nginx", "-g", "daemon off;"] 
+CMD ["nginx", "-g", "daemon off;"]

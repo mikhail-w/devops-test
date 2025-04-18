@@ -1,4 +1,3 @@
-import axios from 'axios';
 import {
   CART_ADD_ITEM,
   CART_REMOVE_ITEM,
@@ -6,24 +5,27 @@ import {
   CART_SAVE_PAYMENT_METHOD,
   CART_CLEAR_ITEMS,
 } from '../constants/cartConstants';
-
-const API_URL = import.meta.env.VITE_API_URL;
+import axiosInstance from '../utils/axiosConfig';
 
 export const addToCart = (id, qty) => async (dispatch, getState) => {
-  const { data } = await axios.get(`${API_URL}products/${id}`);
+  try {
+    const { data } = await axiosInstance.get(`/api/products/${id}/`);
 
-  dispatch({
-    type: CART_ADD_ITEM,
-    payload: {
-      product: data._id,
-      name: data.name,
-      image: data.image,
-      price: data.price,
-      countInStock: data.countInStock,
-      qty,
-    },
-  });
-  localStorage.setItem('cartItems', JSON.stringify(getState().cart.cartItems));
+    dispatch({
+      type: CART_ADD_ITEM,
+      payload: {
+        product: data._id,
+        name: data.name,
+        image: data.image,
+        price: data.price,
+        countInStock: data.countInStock,
+        qty,
+      },
+    });
+    localStorage.setItem('cartItems', JSON.stringify(getState().cart.cartItems));
+  } catch (error) {
+    console.error('Error adding to cart:', error);
+  }
 };
 
 export const removeFromCart = id => (dispatch, getState) => {
