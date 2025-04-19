@@ -39,12 +39,13 @@ git clone https://github.com/mikhail-w/devops-test
 cd devops-test
 ```
 
-2. Create environment file:
+2. Create environment file at the project root:
 ```bash
+# Make sure you're in the project root directory (devops-test/)
 touch .env
 ```
 
-Example `.env` configuration:
+Configure your `.env` file with the following variables (all environment variables must be set in a single `.env` file at the project root):
 ```bash
 # Environment Configuration
 ENVIRONMENT=development
