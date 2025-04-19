@@ -2,11 +2,11 @@ name: Frontend CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [dev]
     paths:
       - 'apps/frontend/**'
   pull_request:
-    branches: [ main ]
+    branches: [main]
     paths:
       - 'apps/frontend/**'
 
@@ -15,38 +15,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: '16'
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
 
-    - name: Install dependencies
-      run: |
-        cd apps/frontend
-        npm install
+      - name: Install dependencies
+        run: |
+          cd apps/frontend
+          npm install
 
-    - name: Run tests
-      run: |
-        cd apps/frontend
-        npm test -- --watchAll=false
+      - name: Run tests
+        run: |
+          cd apps/frontend
+          npm test -- --watchAll=false
 
-    - name: Build Docker image
-      run: |
-        cd apps/frontend
-        docker build -t bonsai-frontend:${{ github.sha }} .
+      - name: Build Docker image
+        run: |
+          cd apps/frontend
+          docker build -t bonsai-frontend:${{ github.sha }} .
 
-    - name: Login to GitHub Container Registry
-      uses: docker/login-action@v1
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Push Docker image
-      run: |
-        docker tag bonsai-frontend:${{ github.sha }} ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
-        docker tag bonsai-frontend:${{ github.sha }} ghcr.io/${{ github.repository }}/frontend:latest
-        docker push ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
-        docker push ghcr.io/${{ github.repository }}/frontend:latest 
+      - name: Push Docker image
+        run: |
+          docker tag bonsai-frontend:${{ github.sha }} ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
+          docker tag bonsai-frontend:${{ github.sha }} ghcr.io/${{ github.repository }}/frontend:latest
+          docker push ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository }}/frontend:latest

@@ -1,3 +1,4 @@
+version: '3.8'
 
 services:
   backend:
@@ -7,11 +8,23 @@ services:
     env_file: 
       - ./.env
     environment:
+      - ENVIRONMENT=${ENVIRONMENT}
+      - DOMAIN_NAME=${DOMAIN_NAME}
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT}
+      - AWS_RDS_HOST=${AWS_RDS_HOST}
+      - AWS_RDS_PORT=${AWS_RDS_PORT}
+      - AWS_RDS_DB_NAME=${AWS_RDS_DB_NAME}
+      - AWS_RDS_USER=${AWS_RDS_USER}
+      - AWS_RDS_PASSWORD=${AWS_RDS_PASSWORD}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_STORAGE_BUCKET_NAME=${AWS_STORAGE_BUCKET_NAME}
+      - AWS_S3_REGION_NAME=${AWS_S3_REGION_NAME}
+      - AWS_S3_CUSTOM_DOMAIN=${AWS_S3_CUSTOM_DOMAIN}
       - DJANGO_SUPERUSER_USERNAME=${ADMIN_USERNAME}
       - DJANGO_SUPERUSER_EMAIL=${ADMIN_EMAIL}
       - DJANGO_SUPERUSER_PASSWORD=${ADMIN_PASSWORD}
@@ -42,7 +55,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s # Increased start period to give more time for startup
+      start_period: 40s
 
   frontend:
     build:
@@ -50,9 +63,12 @@ services:
       dockerfile: Dockerfile
     env_file: .env
     environment:
+      - ENVIRONMENT=${ENVIRONMENT}
+      - DOMAIN_NAME=${DOMAIN_NAME}
       - VITE_API_BASE_URL=${VITE_API_BASE_URL}
       - VITE_API_URL=${VITE_API_URL}
       - VITE_MEDIA_URL=${VITE_MEDIA_URL}
+      - VITE_STATIC_URL=${VITE_STATIC_URL}
       - VITE_WEATHER_API_KEY=${VITE_WEATHER_API_KEY}
       - VITE_PAYPAL_CLIENT_ID=${VITE_PAYPAL_CLIENT_ID}
       - VITE_GOOGLE_MAPS_API_KEY=${VITE_GOOGLE_MAPS_API_KEY}
